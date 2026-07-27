@@ -88,7 +88,10 @@ export default function SettingsView() {
 
       const { error: uploadError } = await supabaseClient.storage
         .from('uploads')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
 
       if (uploadError) {
         throw uploadError;

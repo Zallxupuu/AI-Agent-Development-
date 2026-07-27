@@ -36,3 +36,35 @@ export async function sendWhatsAppMessage(
 
   return response;
 }
+
+export async function sendWhatsAppImage(
+  to: string,
+  imageUrl: string,
+  caption?: string
+): Promise<Response> {
+  const response = await fetch(WA_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "image",
+      image: {
+        link: imageUrl,
+        caption: caption || "",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[WhatsApp API Error] Status: ${response.status}, Body: ${errorBody}`);
+    throw new Error(`WhatsApp API error: ${response.status}`);
+  }
+
+  return response;
+}

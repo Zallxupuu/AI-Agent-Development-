@@ -97,3 +97,19 @@ export interface ApiResponse {
   message: string;
   data?: unknown;
 }
+
+// ==========================================
+// Settings / Configuration Types
+// ==========================================
+
+export interface AiConfig {
+  id: number;
+  business_name: string;
+  business_description: string;
+  products: string;
+  rules: string;
+  store_url?: string;
+  qris_url?: string;
+  payment_format?: string;
+  updated_at?: string;
+}

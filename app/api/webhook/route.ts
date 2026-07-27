@@ -9,7 +9,7 @@
 
 import { type NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, sendWhatsAppImage } from "@/lib/whatsapp";
 import { getGeminiResponse } from "@/lib/gemini";
 import type {
   WhatsAppWebhookPayload,
@@ -154,8 +154,21 @@ async function processIncomingMessage(
   const typedHistory: Message[] = (chatHistory as Message[]) || [];
   const aiResponse = await getGeminiResponse(typedHistory, messageContent);
 
+  let textToSend = aiResponse;
+  const needsQris = textToSend.includes("[QRIS]");
+  if (needsQris) {
+    textToSend = textToSend.replace(/\[QRIS\]/g, "").trim();
+  }
+
   try {
-    await sendWhatsAppMessage(phoneNumber, aiResponse);
+    await sendWhatsAppMessage(phoneNumber, textToSend);
+
+    if (needsQris) {
+      const { data: config } = await supabase.from("ai_config").select("qris_url").eq("id", 1).single();
+      if (config?.qris_url) {
+        await sendWhatsAppImage(phoneNumber, config.qris_url, "Silakan scan QRIS di atas untuk pembayaran.");
+      }
+    }
   } catch (sendError) {
     console.error(`[Webhook] Gagal kirim balasan WA:`, sendError);
   }
@@ -163,6 +176,6 @@ async function processIncomingMessage(
   await supabase.from("messages").insert({
     phone_number: phoneNumber,
     role: "ai",
-    content: aiResponse,
+    content: textToSend,
   });
 }

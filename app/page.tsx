@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { supabaseClient } from "@/lib/supabase-client";
+import SettingsView from "@/components/SettingsView";
 import type { Session, Message } from "@/lib/types";
 import { 
   Bot, 
@@ -12,7 +13,8 @@ import {
   Clock, 
   CheckCircle2, 
   AlertCircle,
-  Loader2
+  Loader2,
+  Settings
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -278,6 +280,21 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Sidebar Bottom: Settings Button */}
+        <div className="p-4 border-t border-gray-200">
+          <button
+            onClick={() => setSelectedPhone("SETTINGS")}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-medium transition-all duration-200 ${
+              selectedPhone === "SETTINGS"
+                ? "bg-purple-100 text-purple-700 shadow-sm"
+                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <Settings size={18} />
+            Pengaturan AI
+          </button>
+        </div>
       </aside>
 
       {/* RIGHT MAIN AREA: Chat View */}
@@ -290,7 +307,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!selectedPhone ? (
+        {selectedPhone === "SETTINGS" ? (
+          <SettingsView />
+        ) : !selectedPhone ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
               <MessageSquare size={40} className="text-gray-200 mb-4" />

@@ -38,7 +38,7 @@ export async function getGeminiResponse(
       
       let paymentText = "";
       if (c.payment_format || c.qris_url) {
-        paymentText = `\nFormat Pembayaran: ${c.payment_format || "Silakan transfer."}\nJika pelanggan ingin melakukan pembayaran pesanan, berikan Format Pembayaran di atas. PENTING: Jika pelanggan secara spesifik meminta QRIS atau kamu rasa QRIS cocok, TAMBAHKAN kata rahasia [QRIS] persis di akhir pesanmu (contoh: "...bukti transfer ya kak. [QRIS]"). Sistem akan otomatis menyulap kata itu menjadi gambar QRIS asli.`;
+        paymentText = `\nFormat Pembayaran: ${c.payment_format || "Silakan transfer."}\n\nATURAN MUTLAK SOAL QRIS:\nJika pelanggan meminta QRIS, kamu WAJIB mengetik kode "[QRIS]" di akhir pesanmu. JANGAN SAMPAI LUPA KODE INI! Contoh balasan: "Baik kak, ini QRIS-nya ya! [QRIS]"`;
       }
 
       finalInstruction = `
@@ -47,7 +47,7 @@ Deskripsi Bisnis: ${c.business_description}
 Produk/Layanan: ${c.products}${linkText}${paymentText}
 Aturan Gaya Bahasa & Penjawab: ${c.rules}
 
-Kamu adalah AI Customer Service untuk bisnis di atas. Jawablah pesan pelanggan berdasarkan informasi di atas, dan SELALU patuhi Aturan Gaya Bahasa & Penjawab yang diberikan.
+Kamu adalah AI Customer Service. Jawablah pesan pelanggan secara natural, dan JANGAN LUPA ATURAN MUTLAK di atas.
       `.trim();
     }
 

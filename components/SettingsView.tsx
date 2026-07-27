@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { supabaseClient } from "@/lib/supabase-client";
-import { Save, Loader2, Settings } from "lucide-react";
+import { Save, Loader2, Settings, UploadCloud } from "lucide-react";
 import type { AiConfig } from "@/lib/types";
 
 export default function SettingsView() {
   const [config, setConfig] = useState<AiConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -67,6 +68,42 @@ export default function SettingsView() {
       setMessage({ type: "error", text: "Gagal menyimpan pengaturan." });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from('uploads')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabaseClient.storage
+        .from('uploads')
+        .getPublicUrl(filePath);
+
+      setConfig(prev => prev ? { ...prev, qris_url: data.publicUrl } : null);
+      setMessage({ type: "success", text: "Gambar berhasil diunggah! Jangan lupa klik Simpan Pengaturan." });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      setMessage({ type: "error", text: "Gagal mengunggah gambar. Pastikan Anda sudah menjalankan SQL untuk storage." });
+    } finally {
+      setUploading(false);
+      // Reset input value so same file can be uploaded again if needed
+      e.target.value = "";
     }
   };
 
@@ -169,15 +206,43 @@ export default function SettingsView() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">URL Gambar QRIS</label>
-                  <p className="text-xs text-gray-500 mb-2">Link gambar QRIS yang bisa diakses publik (contoh dari Imgur atau hosting foto).</p>
-                  <input
-                    type="url"
-                    value={config?.qris_url || ""}
-                    onChange={(e) => setConfig(prev => prev ? { ...prev, qris_url: e.target.value } : null)}
-                    placeholder="Contoh: https://i.imgur.com/qris.jpg"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
-                  />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Gambar QRIS (URL atau Upload)</label>
+                  <p className="text-xs text-gray-500 mb-2">Pilih file dari komputer atau tempel link gambar (contoh: https://i.imgur.com/qris.jpg).</p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="url"
+                      value={config?.qris_url || ""}
+                      onChange={(e) => setConfig(prev => prev ? { ...prev, qris_url: e.target.value } : null)}
+                      placeholder="URL Gambar QRIS"
+                      className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                    />
+                    
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        disabled={uploading}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 rounded-xl transition-colors font-medium disabled:opacity-70"
+                      >
+                        {uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
+                        {uploading ? "Mengunggah..." : "Upload File"}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {config?.qris_url && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Preview Gambar:</p>
+                      <img src={config.qris_url} alt="QRIS Preview" className="max-h-32 rounded-lg border border-gray-200 shadow-sm" />
+                    </div>
+                  )}
                 </div>
 
                 <div>

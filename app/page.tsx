@@ -14,7 +14,8 @@ import {
   CheckCircle2, 
   AlertCircle,
   Loader2,
-  Settings
+  Settings,
+  ArrowLeft
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -221,7 +222,7 @@ export default function Dashboard() {
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
       
       {/* LEFT SIDEBAR: Sessions List */}
-      <aside className="w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full z-10">
+      <aside className={`${selectedPhone ? "hidden md:flex" : "flex w-full"} md:w-80 flex-shrink-0 bg-white border-r border-gray-200 flex-col h-full z-10`}>
         <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-white/80 backdrop-blur-md">
           <div className="flex items-center gap-2">
             <div className="bg-black text-white p-1.5 rounded-lg">
@@ -298,7 +299,7 @@ export default function Dashboard() {
       </aside>
 
       {/* RIGHT MAIN AREA: Chat View */}
-      <main className="flex-1 flex flex-col h-full bg-gray-50/50 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] relative">
+      <main className={`${!selectedPhone ? "hidden md:flex" : "flex w-full"} flex-1 flex-col h-full bg-gray-50/50 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] relative`}>
         {error && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-50 text-red-600 px-4 py-2 rounded-lg border border-red-100 shadow-sm flex items-center gap-2 text-sm">
             <AlertCircle size={16} />
@@ -320,39 +321,46 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Chat Header */}
-            <header className="h-16 px-6 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-50 flex items-center justify-center text-blue-600 font-semibold border border-blue-200/50 shadow-sm">
-                  {selectedPhone.substring(0, 2)}
+            <header className="h-16 px-4 md:px-6 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center gap-2 md:gap-3">
+                <button onClick={() => setSelectedPhone(null)} className="md:hidden mr-1 p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+                  <ArrowLeft size={20} />
+                </button>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-50 flex items-center justify-center text-blue-600 font-semibold border border-blue-200/50 shadow-sm flex-shrink-0">
+                  {selectedPhone === "SETTINGS" ? "⚙️" : selectedPhone.substring(0, 2)}
                 </div>
                 <div>
-                  <h2 className="font-semibold text-gray-800">+{selectedPhone}</h2>
+                  <h2 className="font-semibold text-gray-800 truncate max-w-[150px] md:max-w-none">
+                    {selectedPhone === "SETTINGS" ? "Pengaturan AI" : `+${selectedPhone}`}
+                  </h2>
                   <p className="text-xs text-gray-500 flex items-center gap-1">
                     <CheckCircle2 size={12} className="text-emerald-500" />
-                    Terhubung
+                    {selectedPhone === "SETTINGS" ? "Sistem" : "Terhubung"}
                   </p>
                 </div>
               </div>
 
               {/* AI Toggle Switch */}
-              <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 shadow-inner">
-                <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
-                  {activeSession?.is_bot_active ? <Bot size={14} className="text-blue-500"/> : <BotOff size={14} className="text-gray-400"/>}
-                  Auto-Reply
-                </span>
-                <button 
-                  onClick={toggleBotStatus}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                    activeSession?.is_bot_active ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition duration-300 shadow-sm ${
-                      activeSession?.is_bot_active ? 'translate-x-4.5' : 'translate-x-1'
+              {selectedPhone !== "SETTINGS" && (
+                <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 shadow-inner">
+                  <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                    {activeSession?.is_bot_active ? <Bot size={14} className="text-blue-500"/> : <BotOff size={14} className="text-gray-400"/>}
+                    Auto-Reply
+                  </span>
+                  <button 
+                    onClick={toggleBotStatus}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                      activeSession?.is_bot_active ? 'bg-blue-600' : 'bg-gray-300'
                     }`}
-                  />
-                </button>
-              </div>
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition duration-300 shadow-sm ${
+                        activeSession?.is_bot_active ? 'translate-x-4.5' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
             </header>
 
             {/* Chat Messages */}
@@ -421,12 +429,12 @@ export default function Dashboard() {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white border-t border-gray-200/60 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)]">
+            <div className="p-3 md:p-4 bg-white border-t border-gray-200/60 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)]">
               <form 
                 onSubmit={handleSendMessage}
-                className="flex items-end gap-3 max-w-4xl mx-auto"
+                className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto"
               >
-                <div className="flex-1 bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all duration-200 overflow-hidden shadow-inner flex items-center px-4 py-2 min-h-[52px]">
+                <div className="flex-1 bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all duration-200 overflow-hidden shadow-inner flex items-center px-3 md:px-4 py-2 min-h-[52px]">
                   <textarea
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
@@ -437,7 +445,7 @@ export default function Dashboard() {
                       }
                     }}
                     placeholder={activeSession?.is_bot_active ? "Ketik pesan (Auto-reply AI masih aktif)..." : "Ketik balasan Anda..."}
-                    className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-gray-700 placeholder-gray-400 py-2 max-h-32 text-[15px]"
+                    className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-gray-700 placeholder-gray-400 py-2 max-h-32 text-[14px] md:text-[15px]"
                     rows={1}
                     style={{ height: 'auto', minHeight: '1.5rem' }}
                     disabled={isSending}

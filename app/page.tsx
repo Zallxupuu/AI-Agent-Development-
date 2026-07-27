@@ -239,6 +239,28 @@ export default function Dashboard() {
 
   const activeSession = sessions.find(s => s.phone_number === selectedPhone);
 
+  // Handle Quick Reply
+  const handleQuickReply = (text: string) => {
+    setInputValue(text);
+  };
+
+  // Update Session Status
+  const updateSessionStatus = async (status: 'new' | 'pending' | 'done') => {
+    if (!selectedPhone) return;
+    try {
+      const { error } = await supabaseClient
+        .from("sessions")
+        .update({ status })
+        .eq("phone_number", selectedPhone);
+      
+      if (!error) {
+        setSessions(prev => prev.map(s => s.phone_number === selectedPhone ? { ...s, status } : s));
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
       

@@ -15,6 +15,7 @@ export interface Session {
   phone_number: string; // PK — nomor WA klien (format: 62xxx)
   is_bot_active: boolean; // true = AI menjawab otomatis, false = mode manual/admin
   last_active: string; // ISO 8601 timestamp terakhir interaksi
+  status?: 'new' | 'pending' | 'done';
 }
 
 /** Role yang diizinkan pada tabel `messages` */

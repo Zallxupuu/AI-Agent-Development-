@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabaseClient } from "@/lib/supabase-client";
 import SettingsView from "@/components/SettingsView";
 import ProductsView from "@/components/ProductsView";
+import DashboardOverview from "@/components/DashboardOverview";
 import type { Session, Message, AiConfig } from "@/lib/types";
 import { 
   Bot, 
@@ -18,7 +19,8 @@ import {
   Loader2,
   Settings,
   ArrowLeft,
-  Package
+  Package,
+  Tag
 } from "@/components/Icons";
 
 export default function Dashboard() {
@@ -302,6 +304,14 @@ export default function Dashboard() {
                       </span>
                     </div>
                   </div>
+                  {/* Status Badge */}
+                  {session.status && session.status !== 'new' && (
+                    <div className={`mt-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      session.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {session.status}
+                    </div>
+                  )}
                   </motion.button>
                 ))}
               </AnimatePresence>
@@ -356,22 +366,9 @@ export default function Dashboard() {
         ) : selectedPhone === "PRODUCTS" ? (
           <ProductsView />
         ) : !selectedPhone ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-white/50 backdrop-blur-sm">
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="flex flex-col items-center max-w-sm text-center"
-            >
-              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-gray-100">
-                <MessageSquare size={32} className="text-gray-300" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">Inbox Kosong</h2>
-              <p className="text-sm text-gray-500 leading-relaxed">Pilih percakapan dari sidebar di sebelah kiri untuk mulai merespons pesan pelanggan.</p>
-            </motion.div>
-          </div>
+          <DashboardOverview />
         ) : (
-          <>
+          <div className="flex-1 flex flex-col h-full bg-gray-50/30 relative">
             {/* Chat Header */}
             <header className="h-16 px-4 md:px-6 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
               <div className="flex items-center gap-2 md:gap-3">
@@ -392,25 +389,46 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* AI Toggle Switch */}
+              {/* Actions Right */}
               {(selectedPhone !== "SETTINGS" && selectedPhone !== "PRODUCTS") && (
-                <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 shadow-inner">
-                  <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
-                    {activeSession?.is_bot_active ? <Bot size={14} className="text-blue-500"/> : <BotOff size={14} className="text-gray-400"/>}
-                    Auto-Reply
-                  </span>
-                  <button 
-                    onClick={toggleBotStatus}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                      activeSession?.is_bot_active ? 'bg-blue-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition duration-300 shadow-sm ${
-                        activeSession?.is_bot_active ? 'translate-x-4.5' : 'translate-x-1'
+                <div className="flex items-center gap-3">
+                  {/* Status Dropdown */}
+                  <div className="relative group">
+                    <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                      activeSession?.status === 'pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+                      activeSession?.status === 'done' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                      'bg-white border-gray-200 text-gray-600'
+                    }`}>
+                      <Tag size={12} />
+                      {activeSession?.status === 'pending' ? 'Pending' : activeSession?.status === 'done' ? 'Selesai' : 'Baru'}
+                    </button>
+                    {/* Dropdown Menu */}
+                    <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-100 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden">
+                      <button onClick={() => updateSessionStatus('new')} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">Label: Baru</button>
+                      <button onClick={() => updateSessionStatus('pending')} className="w-full text-left px-4 py-2 text-xs font-medium text-yellow-700 hover:bg-yellow-50 border-t border-gray-50">Label: Pending</button>
+                      <button onClick={() => updateSessionStatus('done')} className="w-full text-left px-4 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 border-t border-gray-50">Label: Selesai</button>
+                    </div>
+                  </div>
+
+                  {/* AI Toggle Switch */}
+                  <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 shadow-inner">
+                    <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                      {activeSession?.is_bot_active ? <Bot size={14} className="text-blue-500"/> : <BotOff size={14} className="text-gray-400"/>}
+                      {activeSession?.is_bot_active ? "AI Aktif" : "Manual"}
+                    </span>
+                    <button 
+                      onClick={toggleBotStatus}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                        activeSession?.is_bot_active ? 'bg-blue-600' : 'bg-gray-300'
                       }`}
-                    />
-                  </button>
+                    >
+                      <span
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition duration-300 shadow-sm ${
+                          activeSession?.is_bot_active ? 'translate-x-4.5' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
               )}
             </header>
@@ -484,6 +502,22 @@ export default function Dashboard() {
 
             {/* Input Area */}
             <div className="p-3 md:p-4 bg-white/80 backdrop-blur-md border-t border-gray-200/60 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-10 relative">
+              {/* Quick Replies */}
+              <div className="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-none">
+                <button onClick={() => handleQuickReply("Terima kasih sudah berbelanja 🙏")} className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[13px] font-medium rounded-full transition-colors border border-gray-200">
+                  Terima kasih 🙏
+                </button>
+                <button onClick={() => handleQuickReply("Pesanan Kakak sedang kami proses 📦")} className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[13px] font-medium rounded-full transition-colors border border-gray-200">
+                  Pesanan diproses 📦
+                </button>
+                <button onClick={() => handleQuickReply("Mohon ditunggu sebentar ya kak 😊")} className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[13px] font-medium rounded-full transition-colors border border-gray-200">
+                  Mohon tunggu 😊
+                </button>
+                <button onClick={() => handleQuickReply("Ada yang bisa kami bantu kak?")} className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[13px] font-medium rounded-full transition-colors border border-gray-200">
+                  Ada yang bisa dibantu?
+                </button>
+              </div>
+
               <form 
                 onSubmit={handleSendMessage}
                 className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto"

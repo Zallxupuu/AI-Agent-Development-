@@ -1,121 +1,64 @@
-# AI Agent Customer Service untuk WhatsApp
+# 🤖 WhatsApp AI Agent Dashboard
 
-Proyek ini adalah sebuah sistem Customer Service cerdas terpadu yang terhubung dengan WhatsApp API (Meta) dan didukung oleh kecerdasan buatan Google Gemini. Proyek ini dibangun menggunakan **Next.js 16 (App Router)** dan **Supabase**.
+A complete, modern WhatsApp AI Agent built with Next.js, integrating directly with Supabase for real-time database management and Google's Gemini API for intelligent, context-aware automated replies. 
 
-## Fitur Utama
+This project provides a sleek, admin-facing dashboard to manage client conversations, toggle the AI bot on or off per session, manage a product catalog, and monitor real-time AI sentiment analysis.
 
-- **Auto-Reply Cerdas (AI):** Membalas pesan pelanggan secara otomatis 24/7 menggunakan model AI `gemini-flash-lite-latest` dengan gaya bahasa yang gaul, santai, dan bersahabat.
-- **Dashboard Admin Realtime:** Memantau seluruh percakapan masuk secara *realtime* (tanpa perlu *refresh*) menggunakan kapabilitas *realtime* dari Supabase.
-- **Ambil Alih Manual (Manual Reply):** Admin bisa mematikan bot AI kapan saja dan membalas pesan secara manual langsung dari dashboard web.
-- **Sistem Sesi Otomatis:** Sistem mendeteksi nomor telepon yang masuk, membuat/memperbarui sesi obrolan, dan menyimpan riwayat percakapan.
+## ✨ Key Features
 
-## Persyaratan (Prerequisites)
+*   **Intelligent Auto-Reply (Gemini AI)**: Automatically responds to WhatsApp messages based on customizable system prompts and rules.
+*   **Real-time Dashboard**: Modern UI with a glassmorphism design, dark/light mode toggle, and real-time updates for incoming chats.
+*   **Zero-DB Sentiment & Language Detection**: The AI automatically analyzes customer emotions (😡/😊/😐) and detects their language (🇮🇩/🇬🇧/🇨🇳), appending visual indicators to the dashboard without requiring schema changes.
+*   **Bot Toggle Switch**: Admins can seamlessly take over a conversation by disabling the AI for specific clients in real-time.
+*   **Product Catalog Management**: Easily add, edit, and delete products that the AI uses as its knowledge base when answering customer queries.
+*   **Dynamic AI Configuration**: Change store URL, QRIS payment links, and global prompt behaviors straight from the UI.
+*   **Mobile Responsive**: A fully responsive sidebar and chat interface that feels like a native app on mobile devices.
 
-Sebelum menjalankan proyek ini, pastikan Anda telah memiliki hal-hal berikut:
+## 🛠 Tech Stack
 
-1. **Node.js** (Versi 18+ disarankan)
-2. **Akun Supabase** (untuk Database & Realtime)
-3. **Akun Meta for Developers** (untuk WhatsApp Cloud API)
-4. **Google Gemini API Key** (dari Google AI Studio)
-5. **Ngrok** atau **Cloudflared** (untuk *tunneling* Webhook saat masa pengembangan)
+*   **Framework**: Next.js (App Router)
+*   **Styling**: Tailwind CSS & Framer Motion
+*   **Database & Auth**: Supabase
+*   **AI Engine**: Google Gemini API
+*   **Icons**: Lucide React
 
----
+## 🚀 Getting Started
 
-## 🛠 Instalasi dan Konfigurasi
+### 1. Prerequisites
+Ensure you have Node.js installed, along with a Supabase project and a Google Gemini API Key.
 
-### 1. Kloning Repositori
-Clone repositori ini ke komputer Anda dan masuk ke dalam direktorinya.
+### 2. Environment Variables
+Create a `.env.local` file in the root directory and add the following variables:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+GEMINI_API_KEY=your_gemini_api_key
+```
 
-### 2. Instalasi Dependensi
-Jalankan perintah berikut untuk menginstal semua library yang dibutuhkan:
+### 3. Installation
 ```bash
 npm install
+# or
+yarn install
 ```
 
-### 3. Konfigurasi Database (Supabase)
-Buat proyek baru di [Supabase](https://supabase.com). Jalankan perintah SQL berikut di menu **SQL Editor** untuk membuat tabel yang dibutuhkan:
-
-```sql
--- Tabel sessions
-CREATE TABLE sessions (
-  phone_number TEXT PRIMARY KEY,
-  is_bot_active BOOLEAN DEFAULT true,
-  last_active TIMESTAMPTZ DEFAULT now()
-);
-
--- Tabel messages
-CREATE TABLE messages (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  phone_number TEXT REFERENCES sessions(phone_number) ON DELETE CASCADE,
-  role TEXT CHECK (role IN ('client', 'ai', 'admin')),
-  content TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-**Sangat Penting (Keamanan & Realtime):**
-- Di menu **Authentication > Policies**, pastikan Anda **mematikan** fitur *Row Level Security* (RLS) untuk tabel `sessions` dan `messages` agar dashboard admin bisa membaca data.
-- Di menu **Database > Publications**, klik setelan untuk `supabase_realtime` lalu centang tabel `sessions` dan `messages` agar fitur *realtime* di dashboard web berfungsi.
-
-### 4. Konfigurasi Environment Variables
-Buat sebuah file bernama `.env.local` di folder *root* proyek ini, dan isi dengan kredensial Anda:
-
-```env
-# URL & Kunci dari Dashboard Supabase Anda (Project Settings > API)
-NEXT_PUBLIC_SUPABASE_URL=https://[PROJECT_ID].supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=ey... (kunci anonim pubik)
-SUPABASE_SERVICE_ROLE_KEY=ey... (kunci service role rahasia)
-
-# Kunci API dari Google AI Studio
-GEMINI_API_KEY=AI...
-
-# Kredensial dari Meta WhatsApp Dashboard
-WHATSAPP_TOKEN=EA... (System User Access Token / Temporary Token)
-WHATSAPP_PHONE_NUMBER_ID=123... (Phone Number ID)
-WHATSAPP_VERIFY_TOKEN=bebas_rahasia_apa_saja
-```
-
----
-
-## 🚀 Cara Menjalankan
-
-### 1. Jalankan Server Next.js
-Jalankan server aplikasi di lingkungan pengembangan (development):
+### 4. Run the Development Server
 ```bash
 npm run dev
+# or
+yarn dev
 ```
-Server akan berjalan di `http://localhost:3000`. Jika Anda membuka URL ini di browser, Anda akan melihat Dashboard Admin.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### 2. Jalankan Tunneling (Ngrok / Cloudflare)
-Meta WhatsApp API mewajibkan *Webhook* menggunakan HTTPS publik. Karena aplikasi berjalan di *localhost*, kita harus membuat "jembatan" (*tunneling*).
+## 📦 Database Schema Requirements
+This project expects the following tables in Supabase:
+- `sessions`: Stores active WhatsApp sessions, bot status, and last active timestamps.
+- `messages`: Stores chat history (client and AI).
+- `products`: Stores the product catalog.
+- `ai_config`: Stores global settings for the AI.
 
-Buka terminal/Command Prompt **baru**, lalu jalankan salah satu perintah berikut:
-
-**Menggunakan Ngrok:**
-```bash
-ngrok http 3000
-```
-*(Copy URL `https://...ngrok-free.app`)*
-
-**Menggunakan Cloudflare Tunnel (Tanpa Akun):**
-```bash
-npx -y cloudflared tunnel --url http://localhost:3000
-```
-*(Copy URL `https://...trycloudflare.com`)*
-
-### 3. Daftarkan Webhook di Meta Dashboard
-1. Buka dashboard aplikasi WhatsApp Anda di Meta for Developers.
-2. Buka menu **WhatsApp > Konfigurasi > Webhooks** (atau di bagian Langkah 2).
-3. Klik tombol edit/pengaturan Webhook.
-4. Masukkan **URL Webhook**: `[URL_DARI_TUNNEL]/api/webhook` (Misal: `https://contoh.ngrok-free.app/api/webhook`).
-5. Masukkan **Verify Token**: (Sesuai dengan `WHATSAPP_VERIFY_TOKEN` di `.env.local`).
-6. Klik "Verify and Save".
-7. Setelah tersimpan, cari bagian "Webhook Fields", temukan **`messages`**, lalu klik tombol **Berlangganan (Subscribe)**.
-
-Semuanya Selesai! Sekarang Anda bisa mengirim chat ke nomor WhatsApp bot Anda, dan pesan akan langsung terkirim ke dashboard serta otomatis dibalas oleh AI.
+## 📝 License
+This project is for educational and development purposes.
 
 ---
-
-## Mematikan Fitur AI (Manual Reply)
-Untuk mengambil alih percakapan (mematikan balasan AI otomatis), cukup buka dashboard web `http://localhost:3000`, pilih nomor kontak yang sedang aktif, dan tekan tombol *switch/toggle* **Auto-Reply AI** di pojok kanan atas hingga berubah warna dari biru menjadi abu-abu. 
-
-Setelah AI mati, Anda bisa mengetik dan membalas pesannya secara manual dari kotak chat di bawah!
+*Built with ❤️ for a smarter, automated customer service experience.*

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabaseClient } from "@/lib/supabase-client";
 import SettingsView from "@/components/SettingsView";
+import ProductsView from "@/components/ProductsView";
 import type { Session, Message, AiConfig } from "@/lib/types";
 import { 
   Bot, 
@@ -16,7 +17,8 @@ import {
   AlertCircle,
   Loader2,
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  Package
 } from "@/components/Icons";
 
 export default function Dashboard() {
@@ -307,17 +309,33 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Sidebar Bottom: Settings Button */}
-        <div className="p-4 border-t border-gray-200">
+        {/* Sidebar Bottom: Menus */}
+        <div className="p-4 border-t border-gray-200 flex flex-col gap-2">
           <button
-            onClick={() => setSelectedPhone("SETTINGS")}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-medium transition-all duration-200 ${
-              selectedPhone === "SETTINGS"
-                ? "bg-purple-100 text-purple-700 shadow-sm"
-                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+            onClick={() => setSelectedPhone("PRODUCTS")}
+            className={`w-full flex items-center gap-3 py-2.5 px-4 rounded-xl font-medium transition-all duration-200 ${
+              selectedPhone === "PRODUCTS"
+                ? "bg-blue-100 text-blue-700 shadow-sm"
+                : "bg-white border border-transparent text-gray-700 hover:bg-gray-50 hover:border-gray-200"
             }`}
           >
-            <Settings size={18} />
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedPhone === "PRODUCTS" ? "bg-blue-200/50" : "bg-gray-100"}`}>
+              <Package size={16} />
+            </div>
+            Katalog Produk
+          </button>
+          
+          <button
+            onClick={() => setSelectedPhone("SETTINGS")}
+            className={`w-full flex items-center gap-3 py-2.5 px-4 rounded-xl font-medium transition-all duration-200 ${
+              selectedPhone === "SETTINGS"
+                ? "bg-purple-100 text-purple-700 shadow-sm"
+                : "bg-white border border-transparent text-gray-700 hover:bg-gray-50 hover:border-gray-200"
+            }`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedPhone === "SETTINGS" ? "bg-purple-200/50" : "bg-gray-100"}`}>
+              <Settings size={16} />
+            </div>
             Pengaturan AI
           </button>
         </div>
@@ -335,6 +353,8 @@ export default function Dashboard() {
 
         {selectedPhone === "SETTINGS" ? (
           <SettingsView />
+        ) : selectedPhone === "PRODUCTS" ? (
+          <ProductsView />
         ) : !selectedPhone ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-white/50 backdrop-blur-sm">
             <motion.div 
@@ -359,21 +379,21 @@ export default function Dashboard() {
                   <ArrowLeft size={20} />
                 </button>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-50 flex items-center justify-center text-blue-600 font-semibold border border-blue-200/50 shadow-sm flex-shrink-0 overflow-hidden">
-                  {selectedPhone === "SETTINGS" ? "⚙️" : (config?.profile_url ? <img src={config.profile_url} alt="Profile" className="w-full h-full object-cover" /> : selectedPhone.substring(0, 2))}
+                  {selectedPhone === "SETTINGS" ? "⚙️" : selectedPhone === "PRODUCTS" ? <Package size={20} /> : (config?.profile_url ? <img src={config.profile_url} alt="Profile" className="w-full h-full object-cover" /> : selectedPhone.substring(0, 2))}
                 </div>
                 <div>
                   <h2 className="font-semibold text-gray-800 truncate max-w-[150px] md:max-w-none">
-                    {selectedPhone === "SETTINGS" ? "Pengaturan AI" : (config?.business_name || `+${selectedPhone}`)}
+                    {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : (config?.business_name || `+${selectedPhone}`)}
                   </h2>
                   <p className="text-xs text-gray-500 flex items-center gap-1">
                     <CheckCircle2 size={12} className="text-emerald-500" />
-                    {selectedPhone === "SETTINGS" ? "Sistem" : "Terhubung"}
+                    {(selectedPhone === "SETTINGS" || selectedPhone === "PRODUCTS") ? "Sistem" : "Terhubung"}
                   </p>
                 </div>
               </div>
 
               {/* AI Toggle Switch */}
-              {selectedPhone !== "SETTINGS" && (
+              {(selectedPhone !== "SETTINGS" && selectedPhone !== "PRODUCTS") && (
                 <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 shadow-inner">
                   <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
                     {activeSession?.is_bot_active ? <Bot size={14} className="text-blue-500"/> : <BotOff size={14} className="text-gray-400"/>}

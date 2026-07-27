@@ -22,12 +22,14 @@ export async function getGeminiResponse(
   latestMessage: string
 ): Promise<string> {
   try {
-    // 1. Fetch dynamic config
-    const { data: configData, error: configError } = await supabase
-      .from("ai_config")
-      .select("*")
-      .eq("id", 1)
-      .single();
+    // 1. Fetch dynamic config and products
+    const [configRes, productsRes] = await Promise.all([
+      supabase.from("ai_config").select("*").eq("id", 1).single(),
+      supabase.from("products").select("*").order("created_at", { ascending: true })
+    ]);
+
+    const { data: configData, error: configError } = configRes;
+    const productsList = productsRes.data || [];
 
     let finalInstruction = DEFAULT_INSTRUCTION;
     if (configData && !configError) {
@@ -44,11 +46,26 @@ export async function getGeminiResponse(
       let profileText = "";
       if (c.profile_url) profileText = `\nURL Logo/Foto Profil Toko: ${c.profile_url} (Berikan link gambar ini jika pelanggan menanyakan logo atau profil toko kita.)`;
 
+      // Format Products
+      let productsText = c.products || ""; // Fallback to old text field
+      if (productsList.length > 0) {
+        productsText = productsList.map((p: any, index: number) => {
+          let str = `${index + 1}. ${p.name}`;
+          if (p.price) str += ` - ${p.price}`;
+          if (p.description) str += `\n   Detail: ${p.description}`;
+          if (p.image_url) str += `\n   Link Foto: ${p.image_url}`;
+          return str;
+        }).join("\n\n");
+      }
+
       finalInstruction = `
 Nama Bisnis: ${c.business_name}
 Deskripsi Bisnis: ${c.business_description}
-Produk/Layanan: ${c.products}${linkText}${paymentText}${profileText}
+Daftar Produk/Katalog:\n${productsText}\n${linkText}${paymentText}${profileText}
 Aturan Gaya Bahasa & Penjawab: ${c.rules}
+
+PENTING UNTUK MENAMPILKAN PRODUK:
+Jika pelanggan bertanya tentang produk, berikan daftar yang rapi menggunakan bullet points (-). Jika produk memiliki "Link Foto", tawarkan kepada mereka atau langsung berikan link-nya agar mereka bisa melihat gambarnya.
 
 Kamu adalah AI Customer Service. Jawablah pesan pelanggan secara natural, dan JANGAN LUPA ATURAN MUTLAK di atas.
       `.trim();

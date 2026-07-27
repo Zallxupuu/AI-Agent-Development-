@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabaseClient } from "@/lib/supabase-client";
 import { Save, Loader2, Settings, UploadCloud } from "lucide-react";
 import type { AiConfig } from "@/lib/types";
@@ -63,6 +64,7 @@ export default function SettingsView() {
 
       if (error) throw error;
       setMessage({ type: "success", text: "Pengaturan AI berhasil disimpan!" });
+      setTimeout(() => setMessage(null), 4000);
     } catch (err: any) {
       console.error("Save error:", err);
       setMessage({ type: "error", text: "Gagal menyimpan pengaturan." });
@@ -97,6 +99,7 @@ export default function SettingsView() {
 
       setConfig(prev => prev ? { ...prev, qris_url: data.publicUrl } : null);
       setMessage({ type: "success", text: "Gambar berhasil diunggah! Jangan lupa klik Simpan Pengaturan." });
+      setTimeout(() => setMessage(null), 5000);
     } catch (error: any) {
       console.error('Upload error:', error);
       setMessage({ type: "error", text: "Gagal mengunggah gambar. Pastikan Anda sudah menjalankan SQL untuk storage." });
@@ -131,11 +134,23 @@ export default function SettingsView() {
       </header>
 
       <div className="max-w-3xl mx-auto p-6 md:p-8">
-        {message && (
-          <div className={`p-4 mb-6 rounded-xl text-sm font-medium border ${message.type === "success" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100"}`}>
-            {message.text}
-          </div>
-        )}
+        <AnimatePresence>
+          {message && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg border text-[14px] font-medium flex items-center gap-2 ${
+                message.type === "success" 
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-emerald-500/10" 
+                  : "bg-red-50 text-red-700 border-red-100 shadow-red-500/10"
+              }`}
+            >
+              {message.type === "success" ? "✅" : "⚠️"}
+              {message.text}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden">
           <div className="p-6 md:p-8 space-y-6">

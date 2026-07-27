@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabaseClient } from "@/lib/supabase-client";
 import SettingsView from "@/components/SettingsView";
 import type { Session, Message } from "@/lib/types";
@@ -248,14 +249,21 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {sessions.map((session) => (
-                <button
-                  key={session.phone_number}
-                  onClick={() => setSelectedPhone(session.phone_number)}
-                  className={`w-full text-left p-4 transition-all duration-200 hover:bg-gray-50 flex flex-col gap-1.5 outline-none focus:bg-gray-50 ${
-                    selectedPhone === session.phone_number ? "bg-blue-50/50 relative" : ""
-                  }`}
-                >
+              <AnimatePresence initial={false}>
+                {sessions.map((session) => (
+                  <motion.button
+                    key={session.phone_number}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => setSelectedPhone(session.phone_number)}
+                    className={`w-full text-left p-4 transition-all duration-200 flex flex-col gap-1.5 outline-none focus:bg-gray-50 ${
+                      selectedPhone === session.phone_number 
+                        ? "bg-blue-50/50 relative hover:bg-blue-50/80" 
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
                   {selectedPhone === session.phone_number && (
                     <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-600" />
                   )}
@@ -276,8 +284,9 @@ export default function Dashboard() {
                       </span>
                     </div>
                   </div>
-                </button>
-              ))}
+                  </motion.button>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -311,12 +320,19 @@ export default function Dashboard() {
         {selectedPhone === "SETTINGS" ? (
           <SettingsView />
         ) : !selectedPhone ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <MessageSquare size={40} className="text-gray-200 mb-4" />
-              <h2 className="text-lg font-medium text-gray-700">Tidak Ada Chat Terpilih</h2>
-              <p className="text-sm mt-1">Pilih percakapan dari sidebar di sebelah kiri.</p>
-            </div>
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-white/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="flex flex-col items-center max-w-sm text-center"
+            >
+              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-gray-100">
+                <MessageSquare size={32} className="text-gray-300" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">Inbox Kosong</h2>
+              <p className="text-sm text-gray-500 leading-relaxed">Pilih percakapan dari sidebar di sebelah kiri untuk mulai merespons pesan pelanggan.</p>
+            </motion.div>
           </div>
         ) : (
           <>
@@ -364,72 +380,74 @@ export default function Dashboard() {
             </header>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-5 scrollbar-thin">
               {messagesLoading ? (
                 <div className="flex-1 flex items-center justify-center">
                   <Loader2 className="animate-spin text-gray-300" size={32} />
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                  <p className="text-sm bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100">Belum ada pesan.</p>
+                  <p className="text-sm bg-white px-5 py-2.5 rounded-full shadow-sm border border-gray-100">Belum ada pesan.</p>
                 </div>
               ) : (
-                messages.map((msg, idx) => {
-                  const isClient = msg.role === "client";
-                  const isAi = msg.role === "ai";
-                  const isAdmin = msg.role === "admin";
-                  
-                  // Add date separators if day changes
-                  const showDate = idx === 0 || 
-                    new Date(messages[idx-1].created_at).toDateString() !== new Date(msg.created_at).toDateString();
+                <AnimatePresence initial={false}>
+                  {messages.map((msg, idx) => {
+                    const isClient = msg.role === "client";
+                    const isAi = msg.role === "ai";
+                    const isAdmin = msg.role === "admin";
+                    
+                    // Add date separators if day changes
+                    const showDate = idx === 0 || 
+                      new Date(messages[idx-1].created_at).toDateString() !== new Date(msg.created_at).toDateString();
 
-                  return (
-                    <React.Fragment key={msg.id}>
-                      {showDate && (
-                        <div className="flex justify-center my-4">
-                          <span className="text-[11px] font-medium text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
-                            {formatDate(msg.created_at)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className={`flex w-full ${isClient ? "justify-start" : "justify-end"}`}>
-                        <div className={`flex flex-col max-w-[75%] ${isClient ? "items-start" : "items-end"}`}>
-                          
-                          {/* Label Role */}
-                          <span className="text-[10px] text-gray-400 mb-1 ml-1 mr-1 font-medium flex items-center gap-1 uppercase tracking-wider">
-                            {isAi && <><Bot size={10}/> AI</>}
-                            {isAdmin && <><User size={10}/> YOU</>}
-                          </span>
-
-                          {/* Chat Bubble */}
-                          <div
-                            className={`px-4 py-2.5 rounded-2xl shadow-sm text-[15px] leading-relaxed relative group ${
-                              isClient
-                                ? "bg-white text-gray-800 border border-gray-200 rounded-tl-sm"
-                                : isAi
-                                ? "bg-gradient-to-br from-indigo-50 to-blue-50 text-indigo-900 border border-indigo-100/50 rounded-tr-sm"
-                                : "bg-gray-900 text-white rounded-tr-sm shadow-md"
-                            }`}
-                          >
-                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    return (
+                      <React.Fragment key={msg.id}>
+                        {showDate && (
+                          <div className="flex justify-center my-4">
+                            <span className="text-[11px] font-medium text-gray-400 bg-white border border-gray-100 shadow-sm px-4 py-1.5 rounded-full">
+                              {formatDate(msg.created_at)}
+                            </span>
+                          </div>
+                        )}
+                        
+                        <motion.div 
+                          initial={{ opacity: 0, y: 15 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                          className={`flex w-full ${isClient ? "justify-start" : "justify-end"}`}
+                        >
+                          <div className={`flex flex-col max-w-[85%] md:max-w-[70%] ${isClient ? "items-start" : "items-end"}`}>
                             
-                            {/* Timestamp (shows on hover for cleaner look, or just subtle) */}
-                            <div className={`text-[10px] mt-1.5 flex justify-end ${isClient ? "text-gray-400" : isAdmin ? "text-gray-400" : "text-indigo-300"}`}>
-                              {formatTime(msg.created_at)}
+                            {/* Chat Bubble */}
+                            <div
+                              className={`px-5 py-3 rounded-2xl shadow-sm text-[15px] leading-relaxed relative group ${
+                                isClient
+                                  ? "bg-white text-gray-800 border border-gray-100 rounded-bl-sm shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
+                                  : isAi
+                                  ? "bg-indigo-600 text-white rounded-br-sm shadow-[0_4px_14px_-6px_rgba(79,70,229,0.4)]"
+                                  : "bg-gray-900 text-white rounded-br-sm shadow-[0_4px_14px_-6px_rgba(0,0,0,0.4)]"
+                              }`}
+                            >
+                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                              
+                              {/* Timestamp */}
+                              <div className={`text-[10px] mt-2 flex items-center ${isClient ? "justify-start text-gray-400" : "justify-end text-indigo-200"}`}>
+                                {formatTime(msg.created_at)}
+                                {(!isClient) && <CheckCircle2 size={10} className="ml-1 opacity-80" />}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </React.Fragment>
-                  );
-                })
+                        </motion.div>
+                      </React.Fragment>
+                    );
+                  })}
+                </AnimatePresence>
               )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
-            <div className="p-3 md:p-4 bg-white border-t border-gray-200/60 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)]">
+            <div className="p-3 md:p-4 bg-white/80 backdrop-blur-md border-t border-gray-200/60 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-10 relative">
               <form 
                 onSubmit={handleSendMessage}
                 className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto"
@@ -451,20 +469,22 @@ export default function Dashboard() {
                     disabled={isSending}
                   />
                 </div>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.95 }}
                   type="submit"
                   disabled={!inputValue.trim() || isSending}
-                  className="h-[52px] w-[52px] rounded-2xl bg-black hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white flex items-center justify-center transition-all duration-200 shadow-md flex-shrink-0"
+                  className="h-[52px] w-[52px] rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 text-white flex items-center justify-center transition-colors shadow-md shadow-indigo-200 disabled:shadow-none flex-shrink-0"
                 >
                   {isSending ? (
                     <Loader2 size={20} className="animate-spin" />
                   ) : (
-                    <Send size={20} className="ml-1" />
+                    <Send size={18} className="ml-0.5" />
                   )}
-                </button>
+                </motion.button>
               </form>
-              <div className="text-center mt-2 text-[11px] text-gray-400 font-medium">
-                Tekan <kbd className="px-1 py-0.5 bg-gray-100 rounded border border-gray-200 font-sans">Enter</kbd> untuk mengirim, <kbd className="px-1 py-0.5 bg-gray-100 rounded border border-gray-200 font-sans">Shift+Enter</kbd> untuk baris baru.
+              <div className="text-center mt-3 text-[11px] text-gray-400/80 font-medium tracking-wide">
+                Tekan <kbd className="px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100 font-sans">Enter</kbd> untuk mengirim, <kbd className="px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100 font-sans">Shift+Enter</kbd> baris baru.
               </div>
             </div>
           </>

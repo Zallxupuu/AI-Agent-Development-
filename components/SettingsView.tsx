@@ -117,15 +117,15 @@ export default function SettingsView() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50/50 relative">
-      <header className="h-16 px-6 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
+    <div className="flex-1 overflow-y-auto bg-gray-50/30 relative scrollbar-thin">
+      <header className="h-16 px-6 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-100 to-pink-50 flex items-center justify-center text-purple-600 font-semibold border border-purple-200/50 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center text-indigo-600 font-semibold border border-indigo-100/50 shadow-[0_2px_10px_-4px_rgba(79,70,229,0.2)]">
             <Settings size={20} />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-800">Pengaturan AI</h2>
-            <p className="text-xs text-gray-500">Sesuaikan pengetahuan & gaya bahasa AI</p>
+            <h2 className="font-semibold text-gray-800 tracking-tight">Pengaturan AI</h2>
+            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Workspace Settings</p>
           </div>
         </div>
       </header>
@@ -137,77 +137,78 @@ export default function SettingsView() {
           </div>
         )}
 
-        <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden">
           <div className="p-6 md:p-8 space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nama Bisnis</label>
+              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Nama Bisnis</label>
               <input
                 type="text"
                 value={config?.business_name || ""}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, business_name: e.target.value } : null)}
                 placeholder="Contoh: Toko Kopi Senja"
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px] shadow-sm hover:border-gray-300"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Deskripsi Bisnis</label>
+              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Deskripsi Bisnis</label>
               <textarea
                 value={config?.business_description || ""}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, business_description: e.target.value } : null)}
                 placeholder="Jelaskan secara singkat bisnismu bergerak di bidang apa..."
                 rows={3}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none resize-none"
+                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px] shadow-sm hover:border-gray-300"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Informasi Produk / Layanan</label>
-              <p className="text-xs text-gray-500 mb-2">Sebutkan daftar produk, harga, jam buka, lokasi, atau promosi yang ada agar AI tahu.</p>
+              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Informasi Produk / Layanan</label>
+              <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Sebutkan daftar produk, harga, jam buka, lokasi, atau promosi yang ada agar AI tahu.</p>
               <textarea
                 value={config?.products || ""}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, products: e.target.value } : null)}
                 placeholder="1. Kopi Susu Aren - Rp 15.000&#10;2. Croissant - Rp 25.000&#10;Jam buka: 08:00 - 22:00..."
                 rows={6}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none resize-none"
+                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px] shadow-sm hover:border-gray-300 font-mono text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Aturan Penjawab & Gaya Bahasa</label>
-              <p className="text-xs text-gray-500 mb-2">Instruksi khusus untuk AI (misal: panggil pelanggan dengan sebutan 'Kak', jangan bahas kompetitor).</p>
+              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Aturan Penjawab & Gaya Bahasa</label>
+              <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Instruksi khusus untuk AI (misal: panggil pelanggan dengan sebutan 'Kak', jangan bahas kompetitor).</p>
               <textarea
                 value={config?.rules || ""}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, rules: e.target.value } : null)}
                 placeholder="Gunakan bahasa santai, asik, pakai emoji. Panggil pelanggan dengan sebutan 'Kak'. Jawab maksimal 2 paragraf pendek."
                 rows={4}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none resize-none"
+                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px] shadow-sm hover:border-gray-300"
               />
             </div>
 
-            <div className="pt-4 border-t border-gray-100">
-              <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-                🔗 Pengaturan Link & Pembayaran
+            <div className="pt-6 border-t border-gray-100">
+              <h3 className="text-sm font-bold text-gray-800 mb-5 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center">🔗</span>
+                Pengaturan Link & Pembayaran
               </h3>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">URL Web Toko</label>
-                  <p className="text-xs text-gray-500 mb-2">Link website, Tokopedia, atau Shopee milikmu.</p>
+                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">URL Web Toko</label>
+                  <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Link website, Tokopedia, atau Shopee milikmu.</p>
                   <input
                     type="url"
                     value={config?.store_url || ""}
                     onChange={(e) => setConfig(prev => prev ? { ...prev, store_url: e.target.value } : null)}
                     placeholder="Contoh: https://tokopedia.com/toko-senja"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px] shadow-sm hover:border-gray-300"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Gambar QRIS (URL atau Upload)</label>
-                  <p className="text-xs text-gray-500 mb-2">Pilih file dari komputer atau tempel link gambar (contoh: https://i.imgur.com/qris.jpg).</p>
+                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Gambar QRIS</label>
+                  <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Pilih file dari komputer atau tempel link gambar (contoh: https://i.imgur.com/qris.jpg).</p>
                   
                   <div className="flex flex-col sm:flex-row gap-3">
                     <input
@@ -215,21 +216,21 @@ export default function SettingsView() {
                       value={config?.qris_url || ""}
                       onChange={(e) => setConfig(prev => prev ? { ...prev, qris_url: e.target.value } : null)}
                       placeholder="URL Gambar QRIS"
-                      className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                      className="flex-1 px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px] shadow-sm hover:border-gray-300"
                     />
                     
-                    <div className="relative">
+                    <div className="relative group">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleFileUpload}
                         disabled={uploading}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
                       />
                       <button
                         type="button"
                         disabled={uploading}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 rounded-xl transition-colors font-medium disabled:opacity-70"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-gray-700 border border-gray-200 group-hover:border-indigo-300 group-hover:bg-indigo-50 group-hover:text-indigo-700 rounded-xl transition-all font-medium disabled:opacity-70 shadow-sm"
                       >
                         {uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
                         {uploading ? "Mengunggah..." : "Upload File"}
@@ -246,25 +247,25 @@ export default function SettingsView() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Format Pembayaran Lengkap</label>
-                  <p className="text-xs text-gray-500 mb-2">Detail rekening dan instruksi transfer.</p>
+                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Format Pembayaran Lengkap</label>
+                  <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Detail rekening dan instruksi transfer.</p>
                   <textarea
                     value={config?.payment_format || ""}
                     onChange={(e) => setConfig(prev => prev ? { ...prev, payment_format: e.target.value } : null)}
                     placeholder="BCA 123456789 a/n Budi&#10;Mandiri 987654321 a/n Budi&#10;Jika sudah transfer, mohon kirim bukti transfer ya kak!"
                     rows={4}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none resize-none"
+                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px] shadow-sm hover:border-gray-300 font-mono text-sm"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+          <div className="px-6 py-4 bg-gray-50/80 border-t border-gray-100 flex justify-end">
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-sm shadow-blue-200"
+              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_14px_-6px_rgba(79,70,229,0.4)]"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
               Simpan Pengaturan

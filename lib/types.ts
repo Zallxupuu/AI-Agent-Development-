@@ -111,5 +111,6 @@ export interface AiConfig {
   store_url?: string;
   qris_url?: string;
   payment_format?: string;
+  profile_url?: string;
   updated_at?: string;
 }

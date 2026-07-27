@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabaseClient } from "@/lib/supabase-client";
 import SettingsView from "@/components/SettingsView";
-import type { Session, Message } from "@/lib/types";
+import type { Session, Message, AiConfig } from "@/lib/types";
 import { 
   Bot, 
   User, 
@@ -17,13 +17,14 @@ import {
   Loader2,
   Settings,
   ArrowLeft
-} from "lucide-react";
+} from "@/components/Icons";
 
 export default function Dashboard() {
   // State for Sessions
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [config, setConfig] = useState<AiConfig | null>(null);
 
   // State for Messages
   const [messages, setMessages] = useState<Message[]>([]);
@@ -84,6 +85,21 @@ export default function Dashboard() {
         }
       )
       .subscribe();
+
+    const fetchConfig = async () => {
+      try {
+        const { data } = await supabaseClient
+          .from("ai_config")
+          .select("*")
+          .eq("id", 1)
+          .single();
+        if (data) setConfig(data as AiConfig);
+      } catch (err) {
+        console.error("Error fetching config:", err);
+      }
+    };
+
+    fetchConfig();
 
     return () => {
       supabaseClient.removeChannel(sessionsChannel);
@@ -342,12 +358,12 @@ export default function Dashboard() {
                 <button onClick={() => setSelectedPhone(null)} className="md:hidden mr-1 p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
                   <ArrowLeft size={20} />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-50 flex items-center justify-center text-blue-600 font-semibold border border-blue-200/50 shadow-sm flex-shrink-0">
-                  {selectedPhone === "SETTINGS" ? "⚙️" : selectedPhone.substring(0, 2)}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-50 flex items-center justify-center text-blue-600 font-semibold border border-blue-200/50 shadow-sm flex-shrink-0 overflow-hidden">
+                  {selectedPhone === "SETTINGS" ? "⚙️" : (config?.profile_url ? <img src={config.profile_url} alt="Profile" className="w-full h-full object-cover" /> : selectedPhone.substring(0, 2))}
                 </div>
                 <div>
                   <h2 className="font-semibold text-gray-800 truncate max-w-[150px] md:max-w-none">
-                    {selectedPhone === "SETTINGS" ? "Pengaturan AI" : `+${selectedPhone}`}
+                    {selectedPhone === "SETTINGS" ? "Pengaturan AI" : (config?.business_name || `+${selectedPhone}`)}
                   </h2>
                   <p className="text-xs text-gray-500 flex items-center gap-1">
                     <CheckCircle2 size={12} className="text-emerald-500" />

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabaseClient } from "@/lib/supabase-client";
-import { Save, Loader2, Settings, UploadCloud } from "lucide-react";
+import { Save, Loader2, Settings, UploadCloud, User } from "@/components/Icons";
 import type { AiConfig } from "@/lib/types";
 
 export default function SettingsView() {
@@ -32,6 +32,7 @@ export default function SettingsView() {
               store_url: "",
               qris_url: "",
               payment_format: "Silakan transfer ke rekening BCA 123456 a/n Bisnisku.",
+              profile_url: "",
             });
           } else {
             throw error;
@@ -97,15 +98,49 @@ export default function SettingsView() {
         .from('uploads')
         .getPublicUrl(filePath);
 
-      setConfig(prev => prev ? { ...prev, qris_url: data.publicUrl } : null);
-      setMessage({ type: "success", text: "Gambar berhasil diunggah! Jangan lupa klik Simpan Pengaturan." });
-      setTimeout(() => setMessage(null), 5000);
+      return data.publicUrl;
     } catch (error: any) {
       console.error('Upload error:', error);
-      setMessage({ type: "error", text: "Gagal mengunggah gambar. Pastikan Anda sudah menjalankan SQL untuk storage." });
+      throw error;
+    }
+  };
+
+  const handleQrisUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      const publicUrl = await uploadFile(file);
+      setConfig(prev => prev ? { ...prev, qris_url: publicUrl } : null);
+      setMessage({ type: "success", text: "Gambar QRIS berhasil diunggah! Jangan lupa klik Simpan Pengaturan." });
+      setTimeout(() => setMessage(null), 5000);
+    } catch (error: any) {
+      setMessage({ type: "error", text: "Gagal mengunggah gambar." });
     } finally {
       setUploading(false);
-      // Reset input value so same file can be uploaded again if needed
+      e.target.value = "";
+    }
+  };
+
+  const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      const publicUrl = await uploadFile(file);
+      setConfig(prev => prev ? { ...prev, profile_url: publicUrl } : null);
+      setMessage({ type: "success", text: "Foto profil berhasil diunggah! Jangan lupa klik Simpan Pengaturan." });
+      setTimeout(() => setMessage(null), 5000);
+    } catch (error: any) {
+      setMessage({ type: "error", text: "Gagal mengunggah gambar." });
+    } finally {
+      setUploading(false);
       e.target.value = "";
     }
   };
@@ -154,16 +189,58 @@ export default function SettingsView() {
 
         <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden">
           <div className="p-6 md:p-8 space-y-6">
-            <div>
-              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Nama Bisnis</label>
-              <input
-                type="text"
-                value={config?.business_name || ""}
-                onChange={(e) => setConfig(prev => prev ? { ...prev, business_name: e.target.value } : null)}
-                placeholder="Contoh: Toko Kopi Senja"
-                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px] shadow-sm hover:border-gray-300"
-                required
-              />
+            
+            <div className="pb-6 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-800 mb-5 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center"><User size={14} /></span>
+                Profil Web & Toko
+              </h3>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Foto Profil Toko</label>
+                  <p className="text-[13px] text-gray-500 mb-3 leading-relaxed">Pilih gambar yang akan tampil sebagai avatar di pojok layar atau header chat.</p>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {config?.profile_url ? (
+                        <img src={config.profile_url} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={24} className="text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 relative group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfileUpload}
+                        disabled={uploading}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+                      />
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-gray-700 border border-gray-200 group-hover:border-indigo-300 group-hover:bg-indigo-50 group-hover:text-indigo-700 rounded-xl transition-all font-medium disabled:opacity-70 shadow-sm"
+                      >
+                        {uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
+                        {uploading ? "Mengunggah..." : "Upload Foto"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Nama Bisnis (Username)</label>
+                  <input
+                    type="text"
+                    value={config?.business_name || ""}
+                    onChange={(e) => setConfig(prev => prev ? { ...prev, business_name: e.target.value } : null)}
+                    placeholder="Contoh: Toko Kopi Senja"
+                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px] shadow-sm hover:border-gray-300"
+                    required
+                  />
+                </div>
+              </div>
             </div>
 
             <div>
@@ -238,7 +315,7 @@ export default function SettingsView() {
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleFileUpload}
+                        onChange={handleQrisUpload}
                         disabled={uploading}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
                       />

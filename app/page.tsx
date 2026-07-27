@@ -6,6 +6,7 @@ import { supabaseClient } from "@/lib/supabase-client";
 import SettingsView from "@/components/SettingsView";
 import ProductsView from "@/components/ProductsView";
 import DashboardOverview from "@/components/DashboardOverview";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { Session, Message, AiConfig } from "@/lib/types";
 import { 
   Bot, 
@@ -20,8 +21,34 @@ import {
   Settings,
   ArrowLeft,
   Package,
-  Tag
+  Tag,
+  LayoutDashboard
 } from "@/components/Icons";
+
+const parseStatus = (statusStr: string | undefined) => {
+  if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id' };
+  const parts = statusStr.split('|');
+  return {
+    base: parts[0] || 'new',
+    mood: parts[1] || 'neutral',
+    lang: parts[2] || 'id'
+  };
+};
+
+const getMoodEmoji = (mood: string) => {
+  if (mood === 'angry') return '😡';
+  if (mood === 'happy') return '😊';
+  if (mood === 'neutral') return '😐';
+  return '';
+};
+
+const getLangFlag = (lang: string) => {
+  if (lang === 'en') return '🇬🇧';
+  if (lang === 'zh') return '🇨🇳';
+  if (lang === 'jv' || lang === 'su') return '🏝️';
+  if (lang === 'id') return '🇮🇩';
+  return '🇮🇩';
+};
 
 export default function Dashboard() {
   // State for Sessions
@@ -29,6 +56,7 @@ export default function Dashboard() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [config, setConfig] = useState<AiConfig | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // State for Messages
   const [messages, setMessages] = useState<Message[]>([]);
@@ -245,166 +273,247 @@ export default function Dashboard() {
   };
 
   // Update Session Status
-  const updateSessionStatus = async (status: 'new' | 'pending' | 'done') => {
+  const updateSessionStatus = async (newBaseStatus: 'new' | 'pending' | 'done') => {
     if (!selectedPhone) return;
+    const currentSession = sessions.find(s => s.phone_number === selectedPhone);
+    const parsed = parseStatus(currentSession?.status);
+    const updatedStatus = `${newBaseStatus}|${parsed.mood}|${parsed.lang}`;
+
     try {
       const { error } = await supabaseClient
         .from("sessions")
-        .update({ status })
+        .update({ status: updatedStatus })
         .eq("phone_number", selectedPhone);
-      
-      if (!error) {
-        setSessions(prev => prev.map(s => s.phone_number === selectedPhone ? { ...s, status } : s));
-      }
-    } catch (err) {
+      if (error) throw error;
+    } catch (err: any) {
       console.error("Failed to update status:", err);
+      setError("Gagal merubah status.");
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 text-gray-900 font-sans antialiased overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground font-sans antialiased overflow-hidden">
       
       {/* LEFT SIDEBAR: Sessions List */}
-      <aside className={`${selectedPhone ? "hidden md:flex" : "flex w-full"} md:w-80 flex-shrink-0 bg-white border-r border-gray-200 flex-col h-full z-10`}>
-        <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-white/80 backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <div className="bg-black text-white p-1.5 rounded-lg">
+      <aside className={`${selectedPhone ? "hidden md:flex" : "flex w-full"} ${isSidebarCollapsed ? "md:w-20" : "md:w-80"} flex-shrink-0 bg-card border-r border-border flex-col h-full z-10 transition-all duration-300 relative`}>
+        
+        {/* Toggle Button (Middle Right Edge) */}
+        <button 
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-card hover:bg-primary text-muted-foreground hover:text-primary-foreground border-2 border-border items-center justify-center rounded-full transition-all shadow-md z-50 group cursor-pointer"
+          title="Toggle Sidebar"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110">
+            {isSidebarCollapsed ? (
+              <polyline points="9 18 15 12 9 6"></polyline>
+            ) : (
+              <polyline points="15 18 9 12 15 6"></polyline>
+            )}
+          </svg>
+        </button>
+
+        <div className={`h-16 border-b border-border flex items-center bg-card/80 backdrop-blur-md transition-all duration-300 ${isSidebarCollapsed ? 'px-0 justify-center' : 'px-5 justify-between'}`}>
+          {!isSidebarCollapsed ? (
+            <>
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="bg-primary text-primary-foreground p-1.5 rounded-lg flex-shrink-0">
+                  <MessageSquare size={18} />
+                </div>
+                <h1 className="font-semibold text-lg tracking-tight whitespace-nowrap">Inbox</h1>
+              </div>
+              <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-1 rounded-full whitespace-nowrap">
+                {sessions.length} Chat
+              </span>
+            </>
+          ) : (
+            <div className="bg-primary text-primary-foreground p-1.5 rounded-lg flex-shrink-0">
               <MessageSquare size={18} />
             </div>
-            <h1 className="font-semibold text-lg tracking-tight">Inbox</h1>
-          </div>
-          <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
-            {sessions.length}
-          </span>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           {sessionsLoading ? (
-            <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <Loader2 className="animate-spin mb-2" size={24} />
               <p className="text-sm">Memuat sesi...</p>
             </div>
           ) : sessions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6 text-center">
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
               <MessageSquare size={32} className="mb-3 opacity-20" />
               <p className="text-sm">Belum ada percakapan masuk.</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              <AnimatePresence initial={false}>
-                {sessions.map((session) => (
-                  <motion.button
-                    key={session.phone_number}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    onClick={() => setSelectedPhone(session.phone_number)}
-                    className={`w-full text-left p-4 transition-all duration-200 flex flex-col gap-1.5 outline-none focus:bg-gray-50 ${
-                      selectedPhone === session.phone_number 
-                        ? "bg-blue-50/50 relative hover:bg-blue-50/80" 
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                  {selectedPhone === session.phone_number && (
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-600" />
-                  )}
-                  <div className="flex justify-between items-center w-full">
-                    <span className="font-medium text-[15px] truncate text-gray-800">
-                      +{session.phone_number}
-                    </span>
-                    <span className="text-[11px] text-gray-400 flex items-center gap-1 font-medium">
-                      <Clock size={10} />
-                      {formatDate(session.last_active)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-1.5">
-                      <div className={`w-2 h-2 rounded-full ${session.is_bot_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-gray-300'}`} />
-                      <span className={`text-[12px] font-medium ${session.is_bot_active ? 'text-emerald-600' : 'text-gray-500'}`}>
-                        {session.is_bot_active ? 'AI Active' : 'Manual'}
-                      </span>
-                    </div>
-                  </div>
-                  {/* Status Badge */}
-                  {session.status && session.status !== 'new' && (
-                    <div className={`mt-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      session.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'
-                    }`}>
-                      {session.status}
-                    </div>
-                  )}
-                  </motion.button>
-                ))}
+            <div className="divide-y divide-border">
+              <AnimatePresence>
+                {sessions.map((session, index) => {
+                  // Stable client name based on phone string sorted alphabetically
+                  const stableIndex = [...sessions].sort((a,b) => a.phone_number.localeCompare(b.phone_number)).findIndex(s => s.phone_number === session.phone_number);
+                  const clientName = `Client ${stableIndex + 1}`;
+                  
+                  return (
+                    <motion.button
+                      key={session.phone_number}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => setSelectedPhone(session.phone_number)}
+                      className={`w-full text-left p-4 transition-all duration-200 flex flex-col gap-1.5 outline-none focus:bg-muted ${
+                        selectedPhone === session.phone_number 
+                          ? "bg-primary/10 relative hover:bg-primary/20" 
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                    {selectedPhone === session.phone_number && (
+                      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary" />
+                    )}
+                    
+                    {isSidebarCollapsed ? (
+                      <div className="flex flex-col items-center justify-center w-full gap-2">
+                         <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
+                            C{stableIndex + 1}
+                         </div>
+                         <div className={`w-2 h-2 rounded-full ${session.is_bot_active ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-medium text-[15px] truncate text-foreground">
+                            {clientName}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
+                            <Clock size={10} />
+                            {formatDate(session.last_active)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-full ${session.is_bot_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                            <span className={`text-[12px] font-medium ${session.is_bot_active ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                              {session.is_bot_active ? 'AI Active' : 'Manual'}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Status Badge */}
+                        {session.status && session.status !== 'new' && (
+                          <div className={`mt-2 self-start inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            session.status === 'pending' ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                          }`}>
+                            {session.status}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    </motion.button>
+                  );
+                })}
               </AnimatePresence>
             </div>
           )}
         </div>
 
         {/* Sidebar Bottom: Menus */}
-        <div className="p-4 border-t border-gray-200 flex flex-col gap-2">
+        <div className={`p-4 border-t border-border flex flex-col gap-2 ${isSidebarCollapsed ? 'items-center' : ''}`}>
+          <button
+            onClick={() => setSelectedPhone("DASHBOARD")}
+            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 py-2.5 px-4'} rounded-xl font-medium transition-all duration-200 ${
+              selectedPhone === "DASHBOARD" || selectedPhone === null
+                ? "bg-primary/20 text-primary shadow-sm"
+                : "bg-transparent border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+            title="Dashboard Utama"
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedPhone === "DASHBOARD" || selectedPhone === null ? "bg-primary/20" : "bg-muted text-muted-foreground"}`}>
+              <LayoutDashboard size={16} />
+            </div>
+            {!isSidebarCollapsed && "Dashboard Utama"}
+          </button>
+          
           <button
             onClick={() => setSelectedPhone("PRODUCTS")}
-            className={`w-full flex items-center gap-3 py-2.5 px-4 rounded-xl font-medium transition-all duration-200 ${
+            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 py-2.5 px-4'} rounded-xl font-medium transition-all duration-200 ${
               selectedPhone === "PRODUCTS"
-                ? "bg-blue-100 text-blue-700 shadow-sm"
-                : "bg-white border border-transparent text-gray-700 hover:bg-gray-50 hover:border-gray-200"
+                ? "bg-primary/20 text-primary shadow-sm"
+                : "bg-transparent border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
+            title="Katalog Produk"
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedPhone === "PRODUCTS" ? "bg-blue-200/50" : "bg-gray-100"}`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedPhone === "PRODUCTS" ? "bg-primary/20" : "bg-muted text-muted-foreground"}`}>
               <Package size={16} />
             </div>
-            Katalog Produk
+            {!isSidebarCollapsed && "Katalog Produk"}
           </button>
           
           <button
             onClick={() => setSelectedPhone("SETTINGS")}
-            className={`w-full flex items-center gap-3 py-2.5 px-4 rounded-xl font-medium transition-all duration-200 ${
+            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 py-2.5 px-4'} rounded-xl font-medium transition-all duration-200 ${
               selectedPhone === "SETTINGS"
-                ? "bg-purple-100 text-purple-700 shadow-sm"
-                : "bg-white border border-transparent text-gray-700 hover:bg-gray-50 hover:border-gray-200"
+                ? "bg-primary/20 text-primary shadow-sm"
+                : "bg-transparent border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
+            title="Pengaturan AI"
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedPhone === "SETTINGS" ? "bg-purple-200/50" : "bg-gray-100"}`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedPhone === "SETTINGS" ? "bg-primary/20" : "bg-muted text-muted-foreground"}`}>
               <Settings size={16} />
             </div>
-            Pengaturan AI
+            {!isSidebarCollapsed && "Pengaturan AI"}
           </button>
+          
+          <div className={`mt-2 flex ${isSidebarCollapsed ? 'justify-center' : 'px-2'}`}>
+            <ThemeToggle isCollapsed={isSidebarCollapsed} />
+          </div>
         </div>
       </aside>
 
       {/* RIGHT MAIN AREA: Chat View */}
-      <main className={`${!selectedPhone ? "hidden md:flex" : "flex w-full"} flex-1 flex-col h-full bg-gray-50/50 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] relative`}>
+      <main className={`${!selectedPhone ? "hidden md:flex" : "flex w-full"} flex-1 flex-col h-full bg-background relative overflow-hidden`}>
         {error && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-50 text-red-600 px-4 py-2 rounded-lg border border-red-100 shadow-sm flex items-center gap-2 text-sm">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg border border-red-100 dark:border-red-800/50 shadow-sm flex items-center gap-2 text-sm">
             <AlertCircle size={16} />
             <span>{error}</span>
             <button onClick={() => setError(null)} className="ml-2 hover:opacity-70">&times;</button>
           </div>
         )}
 
-        {selectedPhone === "SETTINGS" ? (
-          <SettingsView />
-        ) : selectedPhone === "PRODUCTS" ? (
-          <ProductsView />
+        {selectedPhone === "SETTINGS" || selectedPhone === "PRODUCTS" || selectedPhone === "DASHBOARD" ? (
+          <>
+            <header className="md:hidden h-14 px-4 bg-card/80 backdrop-blur-md border-b border-border flex flex-shrink-0 items-center gap-3 sticky top-0 z-50">
+              <button onClick={() => setSelectedPhone(null)} className="p-1.5 -ml-1 hover:bg-muted rounded-lg text-muted-foreground transition-colors">
+                <ArrowLeft size={20} />
+              </button>
+              <h2 className="font-semibold text-foreground text-sm">
+                {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : "Dashboard Utama"}
+              </h2>
+            </header>
+            <div className="flex-1 overflow-y-auto">
+              {selectedPhone === "SETTINGS" ? <SettingsView /> : selectedPhone === "PRODUCTS" ? <ProductsView /> : <DashboardOverview />}
+            </div>
+          </>
         ) : !selectedPhone ? (
-          <DashboardOverview />
+          <div className="flex-1 hidden md:flex flex-col overflow-hidden">
+            <DashboardOverview />
+          </div>
         ) : (
-          <div className="flex-1 flex flex-col h-full bg-gray-50/30 relative">
+          <div className="flex-1 flex flex-col h-full bg-background/50 relative">
             {/* Chat Header */}
-            <header className="h-16 px-4 md:px-6 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
+            <header className="h-16 px-4 md:px-6 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between sticky top-0 z-10">
               <div className="flex items-center gap-2 md:gap-3">
-                <button onClick={() => setSelectedPhone(null)} className="md:hidden mr-1 p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+                <button onClick={() => setSelectedPhone(null)} className="md:hidden mr-1 p-1.5 hover:bg-muted rounded-lg text-muted-foreground transition-colors">
                   <ArrowLeft size={20} />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-50 flex items-center justify-center text-blue-600 font-semibold border border-blue-200/50 shadow-sm flex-shrink-0 overflow-hidden">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold border border-primary/30 shadow-sm flex-shrink-0 overflow-hidden">
                   {selectedPhone === "SETTINGS" ? "⚙️" : selectedPhone === "PRODUCTS" ? <Package size={20} /> : (config?.profile_url ? <img src={config.profile_url} alt="Profile" className="w-full h-full object-cover" /> : selectedPhone.substring(0, 2))}
                 </div>
                 <div>
-                  <h2 className="font-semibold text-gray-800 truncate max-w-[150px] md:max-w-none">
-                    {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : (config?.business_name || `+${selectedPhone}`)}
+                  <h2 className="font-semibold text-foreground truncate max-w-[150px] md:max-w-none">
+                    {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : (
+                      <span className="flex items-center gap-1.5">
+                        {getLangFlag(parseStatus(activeSession?.status).lang)} {config?.business_name || `+${selectedPhone}`} {getMoodEmoji(parseStatus(activeSession?.status).mood)}
+                      </span>
+                    )}
                   </h2>
-                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <CheckCircle2 size={12} className="text-emerald-500" />
                     {(selectedPhone === "SETTINGS" || selectedPhone === "PRODUCTS") ? "Sistem" : "Terhubung"}
                   </p>
@@ -417,31 +526,31 @@ export default function Dashboard() {
                   {/* Status Dropdown */}
                   <div className="relative group">
                     <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
-                      activeSession?.status === 'pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
-                      activeSession?.status === 'done' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                      'bg-white border-gray-200 text-gray-600'
+                      parseStatus(activeSession?.status).base === 'pending' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-600 dark:text-yellow-400' :
+                      parseStatus(activeSession?.status).base === 'done' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
+                      'bg-card border-border text-foreground hover:bg-muted'
                     }`}>
                       <Tag size={12} />
-                      {activeSession?.status === 'pending' ? 'Pending' : activeSession?.status === 'done' ? 'Selesai' : 'Baru'}
+                      {parseStatus(activeSession?.status).base === 'pending' ? 'Pending' : parseStatus(activeSession?.status).base === 'done' ? 'Selesai' : 'Baru'}
                     </button>
                     {/* Dropdown Menu */}
-                    <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-100 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden">
-                      <button onClick={() => updateSessionStatus('new')} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">Label: Baru</button>
-                      <button onClick={() => updateSessionStatus('pending')} className="w-full text-left px-4 py-2 text-xs font-medium text-yellow-700 hover:bg-yellow-50 border-t border-gray-50">Label: Pending</button>
-                      <button onClick={() => updateSessionStatus('done')} className="w-full text-left px-4 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 border-t border-gray-50">Label: Selesai</button>
+                    <div className="absolute right-0 top-full mt-1 w-32 bg-card border border-border rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden">
+                      <button onClick={() => updateSessionStatus('new')} className="w-full text-left px-4 py-2 text-xs font-medium text-foreground hover:bg-muted">Label: Baru</button>
+                      <button onClick={() => updateSessionStatus('pending')} className="w-full text-left px-4 py-2 text-xs font-medium text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 border-t border-border">Label: Pending</button>
+                      <button onClick={() => updateSessionStatus('done')} className="w-full text-left px-4 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 border-t border-border">Label: Selesai</button>
                     </div>
                   </div>
 
                   {/* AI Toggle Switch */}
-                  <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 shadow-inner">
-                    <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
-                      {activeSession?.is_bot_active ? <Bot size={14} className="text-blue-500"/> : <BotOff size={14} className="text-gray-400"/>}
+                  <div className="flex items-center gap-3 bg-muted px-3 py-1.5 rounded-full border border-border shadow-inner">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                      {activeSession?.is_bot_active ? <Bot size={14} className="text-primary"/> : <BotOff size={14} className="text-muted-foreground"/>}
                       {activeSession?.is_bot_active ? "AI Aktif" : "Manual"}
                     </span>
                     <button 
                       onClick={toggleBotStatus}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-                        activeSession?.is_bot_active ? 'bg-blue-600' : 'bg-gray-300'
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-background ${
+                        activeSession?.is_bot_active ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
                       }`}
                     >
                       <span
@@ -459,11 +568,11 @@ export default function Dashboard() {
             <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-5 scrollbar-thin">
               {messagesLoading ? (
                 <div className="flex-1 flex items-center justify-center">
-                  <Loader2 className="animate-spin text-gray-300" size={32} />
+                  <Loader2 className="animate-spin text-muted-foreground" size={32} />
                 </div>
               ) : messages.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                  <p className="text-sm bg-white px-5 py-2.5 rounded-full shadow-sm border border-gray-100">Belum ada pesan.</p>
+                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                  <p className="text-sm bg-card px-5 py-2.5 rounded-full shadow-sm border border-border">Belum ada pesan.</p>
                 </div>
               ) : (
                 <AnimatePresence initial={false}>
@@ -480,7 +589,7 @@ export default function Dashboard() {
                       <React.Fragment key={msg.id}>
                         {showDate && (
                           <div className="flex justify-center my-4">
-                            <span className="text-[11px] font-medium text-gray-400 bg-white border border-gray-100 shadow-sm px-4 py-1.5 rounded-full">
+                            <span className="text-[11px] font-medium text-muted-foreground bg-card border border-border shadow-sm px-4 py-1.5 rounded-full">
                               {formatDate(msg.created_at)}
                             </span>
                           </div>
@@ -498,16 +607,25 @@ export default function Dashboard() {
                             <div
                               className={`px-5 py-3 rounded-2xl shadow-sm text-[15px] leading-relaxed relative group ${
                                 isClient
-                                  ? "bg-white text-gray-800 border border-gray-100 rounded-bl-sm shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
+                                  ? "bg-card text-card-foreground border border-border rounded-bl-sm shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
                                   : isAi
-                                  ? "bg-indigo-600 text-white rounded-br-sm shadow-[0_4px_14px_-6px_rgba(79,70,229,0.4)]"
-                                  : "bg-gray-900 text-white rounded-br-sm shadow-[0_4px_14px_-6px_rgba(0,0,0,0.4)]"
+                                  ? "bg-primary text-primary-foreground rounded-br-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.4)]"
+                                  : "bg-foreground text-background rounded-br-sm shadow-[0_4px_14px_-6px_rgba(0,0,0,0.4)]"
                               }`}
                             >
+                              {!isClient && (
+                                <div className="text-[11px] font-bold tracking-wide mb-1 opacity-80 flex items-center gap-1.5 justify-end">
+                                  {isAi ? (
+                                    <><Bot size={12} /> Dibalas oleh AI</>
+                                  ) : (
+                                    <><User size={12} /> Dibalas oleh Admin</>
+                                  )}
+                                </div>
+                              )}
                               <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                               
                               {/* Timestamp */}
-                              <div className={`text-[10px] mt-2 flex items-center ${isClient ? "justify-start text-gray-400" : "justify-end text-indigo-200"}`}>
+                              <div className={`text-[10px] mt-2 flex items-center ${isClient ? "justify-start text-muted-foreground" : "justify-end text-primary-foreground/70"}`}>
                                 {formatTime(msg.created_at)}
                                 {(!isClient) && <CheckCircle2 size={10} className="ml-1 opacity-80" />}
                               </div>
@@ -523,19 +641,19 @@ export default function Dashboard() {
             </div>
 
             {/* Input Area */}
-            <div className="p-3 md:p-4 bg-white/80 backdrop-blur-md border-t border-gray-200/60 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-10 relative">
+            <div className="p-3 md:p-4 bg-card/80 backdrop-blur-md border-t border-border/60 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-10 relative">
               {/* Quick Replies */}
               <div className="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-none">
-                <button onClick={() => handleQuickReply("Terima kasih sudah berbelanja 🙏")} className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[13px] font-medium rounded-full transition-colors border border-gray-200">
+                <button onClick={() => handleQuickReply("Terima kasih sudah berbelanja 🙏")} className="whitespace-nowrap px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground text-[13px] font-medium rounded-full transition-colors border border-border">
                   Terima kasih 🙏
                 </button>
-                <button onClick={() => handleQuickReply("Pesanan Kakak sedang kami proses 📦")} className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[13px] font-medium rounded-full transition-colors border border-gray-200">
+                <button onClick={() => handleQuickReply("Pesanan Kakak sedang kami proses 📦")} className="whitespace-nowrap px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground text-[13px] font-medium rounded-full transition-colors border border-border">
                   Pesanan diproses 📦
                 </button>
-                <button onClick={() => handleQuickReply("Mohon ditunggu sebentar ya kak 😊")} className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[13px] font-medium rounded-full transition-colors border border-gray-200">
+                <button onClick={() => handleQuickReply("Mohon ditunggu sebentar ya kak 😊")} className="whitespace-nowrap px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground text-[13px] font-medium rounded-full transition-colors border border-border">
                   Mohon tunggu 😊
                 </button>
-                <button onClick={() => handleQuickReply("Ada yang bisa kami bantu kak?")} className="whitespace-nowrap px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[13px] font-medium rounded-full transition-colors border border-gray-200">
+                <button onClick={() => handleQuickReply("Ada yang bisa kami bantu kak?")} className="whitespace-nowrap px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground text-[13px] font-medium rounded-full transition-colors border border-border">
                   Ada yang bisa dibantu?
                 </button>
               </div>
@@ -544,7 +662,7 @@ export default function Dashboard() {
                 onSubmit={handleSendMessage}
                 className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto"
               >
-                <div className="flex-1 bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all duration-200 overflow-hidden shadow-inner flex items-center px-3 md:px-4 py-2 min-h-[52px]">
+                <div className="flex-1 bg-muted rounded-2xl border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 overflow-hidden shadow-inner flex items-center px-3 md:px-4 py-2 min-h-[52px]">
                   <textarea
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
@@ -555,7 +673,7 @@ export default function Dashboard() {
                       }
                     }}
                     placeholder={activeSession?.is_bot_active ? "Ketik pesan (Auto-reply AI masih aktif)..." : "Ketik balasan Anda..."}
-                    className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-gray-700 placeholder-gray-400 py-2 max-h-32 text-[14px] md:text-[15px]"
+                    className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-foreground placeholder-muted-foreground py-2 max-h-32 text-[14px] md:text-[15px]"
                     rows={1}
                     style={{ height: 'auto', minHeight: '1.5rem' }}
                     disabled={isSending}
@@ -566,7 +684,7 @@ export default function Dashboard() {
                   whileTap={{ scale: 0.95 }}
                   type="submit"
                   disabled={!inputValue.trim() || isSending}
-                  className="h-[52px] w-[52px] rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 text-white flex items-center justify-center transition-colors shadow-md shadow-indigo-200 disabled:shadow-none flex-shrink-0"
+                  className="h-[52px] w-[52px] rounded-2xl bg-primary hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground text-primary-foreground flex items-center justify-center transition-colors shadow-md shadow-primary/30 disabled:shadow-none flex-shrink-0"
                 >
                   {isSending ? (
                     <Loader2 size={20} className="animate-spin" />
@@ -575,8 +693,8 @@ export default function Dashboard() {
                   )}
                 </motion.button>
               </form>
-              <div className="text-center mt-3 text-[11px] text-gray-400/80 font-medium tracking-wide">
-                Tekan <kbd className="px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100 font-sans">Enter</kbd> untuk mengirim, <kbd className="px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100 font-sans">Shift+Enter</kbd> baris baru.
+              <div className="text-center mt-3 text-[11px] text-muted-foreground font-medium tracking-wide">
+                Tekan <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-sans">Enter</kbd> untuk mengirim, <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-sans">Shift+Enter</kbd> baris baru.
               </div>
             </div>
           </div>

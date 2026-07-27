@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabaseClient } from "@/lib/supabase-client";
-import { Save, Loader2, Settings, UploadCloud, User } from "@/components/Icons";
+import { Save, Loader2, Settings, UploadCloud, ArrowLeft, LinkIcon, Megaphone, User } from "@/components/Icons";
 import type { AiConfig } from "@/lib/types";
 
 export default function SettingsView() {
@@ -10,6 +10,11 @@ export default function SettingsView() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Promo State (Stored in config.products as JSON)
+  const [promoActive, setPromoActive] = useState(false);
+  const [promoEndDate, setPromoEndDate] = useState("");
+  const [promoText, setPromoText] = useState("");
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -38,7 +43,16 @@ export default function SettingsView() {
             throw error;
           }
         } else {
-          setConfig(data as AiConfig);
+          const configData = data as AiConfig;
+          setConfig(configData);
+          try {
+            const promo = JSON.parse(configData.products || "{}");
+            setPromoActive(promo.isActive || false);
+            setPromoEndDate(promo.endDate || "");
+            setPromoText(promo.promoText || "");
+          } catch (e) {
+            // If old text, just ignore
+          }
         }
       } catch (err: any) {
         console.error("Error fetching config:", err);
@@ -59,9 +73,14 @@ export default function SettingsView() {
     setMessage(null);
 
     try {
+      const promoObj = {
+        isActive: promoActive,
+        endDate: promoEndDate,
+        promoText: promoText
+      };
       const { error } = await supabaseClient
         .from("ai_config")
-        .upsert({ ...config, updated_at: new Date().toISOString() });
+        .upsert({ ...config, products: JSON.stringify(promoObj), updated_at: new Date().toISOString() });
 
       if (error) throw error;
       setMessage({ type: "success", text: "Pengaturan AI berhasil disimpan!" });
@@ -144,23 +163,23 @@ export default function SettingsView() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-        <Loader2 className="animate-spin mb-4 text-blue-500" size={32} />
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+        <Loader2 className="animate-spin mb-4 text-primary" size={32} />
         <p>Memuat Pengaturan...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50/30 relative scrollbar-thin">
-      <header className="h-16 px-6 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
+    <div className="flex-1 overflow-y-auto bg-background relative scrollbar-thin">
+      <header className="h-16 px-6 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center text-indigo-600 font-semibold border border-indigo-100/50 shadow-[0_2px_10px_-4px_rgba(79,70,229,0.2)]">
+          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-semibold border border-primary/30 shadow-sm">
             <Settings size={20} />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-800 tracking-tight">Pengaturan AI</h2>
-            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">Workspace Settings</p>
+            <h2 className="font-semibold text-foreground tracking-tight">Pengaturan AI</h2>
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Workspace Settings</p>
           </div>
         </div>
       </header>
@@ -184,26 +203,26 @@ export default function SettingsView() {
           )}
         </AnimatePresence>
 
-        <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+        <form onSubmit={handleSave} className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
           <div className="p-6 md:p-8 space-y-6">
             
-            <div className="pb-6 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-800 mb-5 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center"><User size={14} /></span>
+            <div className="pb-6 border-b border-border">
+              <h3 className="text-sm font-bold text-foreground mb-5 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md bg-primary/20 text-primary flex items-center justify-center"><User size={14} /></span>
                 Profil Web & Toko
               </h3>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Foto Profil Toko</label>
-                  <p className="text-[13px] text-gray-500 mb-3 leading-relaxed">Pilih gambar yang akan tampil sebagai avatar di pojok layar atau header chat.</p>
+                  <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Foto Profil Toko</label>
+                  <p className="text-[13px] text-muted-foreground mb-3 leading-relaxed">Pilih gambar yang akan tampil sebagai avatar di pojok layar atau header chat.</p>
                   
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-16 rounded-full bg-muted border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
                       {config?.profile_url ? (
                         <img src={config.profile_url} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
-                        <User size={24} className="text-gray-400" />
+                        <User size={24} className="text-muted-foreground" />
                       )}
                     </div>
                     <div className="flex-1 relative group">
@@ -217,7 +236,7 @@ export default function SettingsView() {
                       <button
                         type="button"
                         disabled={uploading}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-gray-700 border border-gray-200 group-hover:border-indigo-300 group-hover:bg-indigo-50 group-hover:text-indigo-700 rounded-xl transition-all font-medium disabled:opacity-70 shadow-sm"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-card text-foreground border border-border group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary rounded-xl transition-all font-medium disabled:opacity-70 shadow-sm"
                       >
                         {uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
                         {uploading ? "Mengunggah..." : "Upload Foto"}
@@ -227,13 +246,13 @@ export default function SettingsView() {
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Nama Bisnis (Username)</label>
+                  <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Nama Bisnis (Username)</label>
                   <input
                     type="text"
                     value={config?.business_name || ""}
                     onChange={(e) => setConfig(prev => prev ? { ...prev, business_name: e.target.value } : null)}
                     placeholder="Contoh: Toko Kopi Senja"
-                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px] shadow-sm hover:border-gray-300"
+                    className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px] shadow-sm hover:border-primary/50"
                     required
                   />
                 </div>
@@ -241,63 +260,96 @@ export default function SettingsView() {
             </div>
 
             <div>
-              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Deskripsi Bisnis</label>
+              <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Deskripsi Bisnis</label>
               <textarea
                 value={config?.business_description || ""}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, business_description: e.target.value } : null)}
                 placeholder="Jelaskan secara singkat bisnismu bergerak di bidang apa..."
                 rows={3}
-                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px] shadow-sm hover:border-gray-300"
+                className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none text-[15px] shadow-sm hover:border-primary/50"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Informasi Produk / Layanan</label>
-              <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Sebutkan daftar produk, harga, jam buka, lokasi, atau promosi yang ada agar AI tahu.</p>
-              <textarea
-                value={config?.products || ""}
-                onChange={(e) => setConfig(prev => prev ? { ...prev, products: e.target.value } : null)}
-                placeholder="1. Kopi Susu Aren - Rp 15.000&#10;2. Croissant - Rp 25.000&#10;Jam buka: 08:00 - 22:00..."
-                rows={6}
-                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px] shadow-sm hover:border-gray-300 font-mono text-sm"
-              />
+            <div className="pt-6 border-t border-border">
+              <h3 className="text-sm font-bold text-foreground mb-5 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md bg-yellow-500/20 text-yellow-600 flex items-center justify-center"><Megaphone size={14} /></span>
+                Promo Berbatas Waktu (Opsional)
+              </h3>
+              
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-xl">
+                  <div>
+                    <label className="block text-[14px] font-semibold text-foreground mb-1">Aktifkan Promo</label>
+                    <p className="text-[12px] text-muted-foreground">Jika diaktifkan, AI akan menyertakan pesan promo saat pelanggan menanyakan produk.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={promoActive} onChange={(e) => setPromoActive(e.target.checked)} />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {promoActive && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-6">
+                    <div>
+                      <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Berlaku Sampai (Tanggal)</label>
+                      <input
+                        type="date"
+                        value={promoEndDate}
+                        onChange={(e) => setPromoEndDate(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px] shadow-sm hover:border-primary/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Teks Template Promo</label>
+                      <p className="text-[12px] text-muted-foreground mb-2 leading-relaxed">Format pesan promo yang akan dikirim. Boleh pakai harga coret (~Rp 50.000~), bintang tebal (*Rp 20.000*), dll.</p>
+                      <textarea
+                        value={promoText}
+                        onChange={(e) => setPromoText(e.target.value)}
+                        placeholder="📌Untuk produk X, kami sedang ada PROMO Bulan ini:&#10;Harga Normal: ~Rp 350.000~&#10;Harga PROMO cuman: *Rp 125.000*"
+                        rows={5}
+                        className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none text-[15px] shadow-sm hover:border-primary/50 font-mono text-sm"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
 
             <div>
-              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Aturan Penjawab & Gaya Bahasa</label>
-              <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Instruksi khusus untuk AI (misal: panggil pelanggan dengan sebutan 'Kak', jangan bahas kompetitor).</p>
+              <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Aturan Penjawab & Gaya Bahasa</label>
+              <p className="text-[13px] text-muted-foreground mb-2 leading-relaxed">Instruksi khusus untuk AI (misal: panggil pelanggan dengan sebutan 'Kak', jangan bahas kompetitor).</p>
               <textarea
                 value={config?.rules || ""}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, rules: e.target.value } : null)}
                 placeholder="Gunakan bahasa santai, asik, pakai emoji. Panggil pelanggan dengan sebutan 'Kak'. Jawab maksimal 2 paragraf pendek."
                 rows={4}
-                className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px] shadow-sm hover:border-gray-300"
+                className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none text-[15px] shadow-sm hover:border-primary/50"
               />
             </div>
 
-            <div className="pt-6 border-t border-gray-100">
-              <h3 className="text-sm font-bold text-gray-800 mb-5 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center">🔗</span>
+            <div className="pt-6 border-t border-border">
+              <h3 className="text-sm font-bold text-foreground mb-5 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md bg-primary/20 text-primary flex items-center justify-center"><LinkIcon size={14} /></span>
                 Pengaturan Link & Pembayaran
               </h3>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">URL Web Toko</label>
-                  <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Link website, Tokopedia, atau Shopee milikmu.</p>
+                  <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">URL Web Toko</label>
+                  <p className="text-[13px] text-muted-foreground mb-2 leading-relaxed">Link website, Tokopedia, atau Shopee milikmu.</p>
                   <input
                     type="url"
                     value={config?.store_url || ""}
                     onChange={(e) => setConfig(prev => prev ? { ...prev, store_url: e.target.value } : null)}
                     placeholder="Contoh: https://tokopedia.com/toko-senja"
-                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px] shadow-sm hover:border-gray-300"
+                    className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px] shadow-sm hover:border-primary/50"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Gambar QRIS</label>
-                  <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Pilih file dari komputer atau tempel link gambar (contoh: https://i.imgur.com/qris.jpg).</p>
+                  <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Gambar QRIS</label>
+                  <p className="text-[13px] text-muted-foreground mb-2 leading-relaxed">Pilih file dari komputer atau tempel link gambar (contoh: https://i.imgur.com/qris.jpg).</p>
                   
                   <div className="flex flex-col sm:flex-row gap-3">
                     <input
@@ -305,7 +357,7 @@ export default function SettingsView() {
                       value={config?.qris_url || ""}
                       onChange={(e) => setConfig(prev => prev ? { ...prev, qris_url: e.target.value } : null)}
                       placeholder="URL Gambar QRIS"
-                      className="flex-1 px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px] shadow-sm hover:border-gray-300"
+                      className="flex-1 px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px] shadow-sm hover:border-primary/50"
                     />
                     
                     <div className="relative group">
@@ -319,7 +371,7 @@ export default function SettingsView() {
                       <button
                         type="button"
                         disabled={uploading}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-gray-700 border border-gray-200 group-hover:border-indigo-300 group-hover:bg-indigo-50 group-hover:text-indigo-700 rounded-xl transition-all font-medium disabled:opacity-70 shadow-sm"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-card text-foreground border border-border group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary rounded-xl transition-all font-medium disabled:opacity-70 shadow-sm"
                       >
                         {uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
                         {uploading ? "Mengunggah..." : "Upload File"}
@@ -329,32 +381,32 @@ export default function SettingsView() {
                   
                   {config?.qris_url && (
                     <div className="mt-3">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Preview Gambar:</p>
-                      <img src={config.qris_url} alt="QRIS Preview" className="max-h-32 rounded-lg border border-gray-200 shadow-sm" />
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Preview Gambar:</p>
+                      <img src={config.qris_url} alt="QRIS Preview" className="max-h-32 rounded-lg border border-border shadow-sm" />
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Format Pembayaran Lengkap</label>
-                  <p className="text-[13px] text-gray-500 mb-2 leading-relaxed">Detail rekening dan instruksi transfer.</p>
+                  <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Format Pembayaran Lengkap</label>
+                  <p className="text-[13px] text-muted-foreground mb-2 leading-relaxed">Detail rekening dan instruksi transfer.</p>
                   <textarea
                     value={config?.payment_format || ""}
                     onChange={(e) => setConfig(prev => prev ? { ...prev, payment_format: e.target.value } : null)}
                     placeholder="BCA 123456789 a/n Budi&#10;Mandiri 987654321 a/n Budi&#10;Jika sudah transfer, mohon kirim bukti transfer ya kak!"
                     rows={4}
-                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px] shadow-sm hover:border-gray-300 font-mono text-sm"
+                    className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none text-[15px] shadow-sm hover:border-primary/50 font-mono text-sm"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50/80 border-t border-gray-100 flex justify-end">
+          <div className="px-6 py-4 bg-muted/30 border-t border-border flex justify-end">
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_14px_-6px_rgba(79,70,229,0.4)]"
+              className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-hover text-primary-foreground font-medium rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-md shadow-primary/30"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
               Simpan Pengaturan

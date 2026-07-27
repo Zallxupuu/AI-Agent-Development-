@@ -167,28 +167,28 @@ export default function ProductsView() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-        <Loader2 className="animate-spin mb-4 text-indigo-500" size={32} />
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+        <Loader2 className="animate-spin mb-4 text-primary" size={32} />
         <p>Memuat Katalog Produk...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50/30 relative scrollbar-thin">
-      <header className="h-16 px-6 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
+    <div className="flex-1 overflow-y-auto bg-background relative scrollbar-thin">
+      <header className="h-16 px-6 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center text-indigo-600 font-semibold border border-indigo-100/50 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-semibold border border-primary/30 shadow-sm">
             <Package size={20} />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-800 tracking-tight">Katalog Produk</h2>
-            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">{products.length} Produk Tersedia</p>
+            <h2 className="font-semibold text-foreground tracking-tight">Katalog Produk</h2>
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">{products.length} Produk Tersedia</p>
           </div>
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-[0_4px_14px_-6px_rgba(79,70,229,0.4)]"
+          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-primary-foreground text-sm font-medium rounded-xl transition-colors shadow-md shadow-primary/30"
         >
           <Plus size={16} />
           Tambah Produk
@@ -216,14 +216,14 @@ export default function ProductsView() {
 
         {products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6 text-gray-300">
+            <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6 text-muted-foreground/50">
               <Package size={48} />
             </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Katalog Masih Kosong</h3>
-            <p className="text-gray-500 max-w-md mb-8">Anda belum menambahkan produk apa pun. Tambahkan produk sekarang agar AI bisa merekomendasikannya ke pelanggan.</p>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Katalog Masih Kosong</h3>
+            <p className="text-muted-foreground max-w-md mb-8">Anda belum menambahkan produk apa pun. Tambahkan produk sekarang agar AI bisa merekomendasikannya ke pelanggan.</p>
             <button
               onClick={openAddModal}
-              className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 text-gray-700 font-medium rounded-xl transition-all shadow-sm"
+              className="flex items-center gap-2 px-6 py-2.5 bg-card border border-border hover:border-primary/50 hover:bg-primary/10 hover:text-primary text-foreground font-medium rounded-xl transition-all shadow-sm"
             >
               <Plus size={18} />
               Tambah Produk Pertama
@@ -237,36 +237,36 @@ export default function ProductsView() {
                 layout
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow relative"
+                className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden group hover:shadow-md transition-shadow relative"
               >
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-10">
-                  <button onClick={() => openEditModal(product)} className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm text-gray-600 hover:text-indigo-600 flex items-center justify-center shadow-sm border border-gray-100">
+                  <button onClick={() => openEditModal(product)} className="w-8 h-8 rounded-full bg-card/90 backdrop-blur-sm text-foreground hover:text-primary flex items-center justify-center shadow-sm border border-border">
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => handleDelete(product.id)} className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm text-gray-600 hover:text-red-600 flex items-center justify-center shadow-sm border border-gray-100">
+                  <button onClick={() => handleDelete(product.id)} className="w-8 h-8 rounded-full bg-card/90 backdrop-blur-sm text-foreground hover:text-red-500 flex items-center justify-center shadow-sm border border-border">
                     <Trash size={14} />
                   </button>
                 </div>
                 
-                <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-50 relative">
+                <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden border-b border-border relative">
                   {product.image_url ? (
                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
-                    <Package size={40} className="text-gray-300" />
+                    <Package size={40} className="text-muted-foreground/30" />
                   )}
                 </div>
                 
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <h3 className="font-semibold text-gray-800 text-[15px] truncate">{product.name}</h3>
+                    <h3 className="font-semibold text-foreground text-[15px] truncate">{product.name}</h3>
                     {product.category && (
-                      <span className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
+                      <span className="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
                         {product.category}
                       </span>
                     )}
                   </div>
-                  {product.price && <p className="text-indigo-600 font-bold text-[14px] mb-2">{product.price}</p>}
-                  <p className="text-gray-500 text-[13px] line-clamp-2 leading-relaxed">{product.description || "Tidak ada deskripsi"}</p>
+                  {product.price && <p className="text-primary font-bold text-[14px] mb-2">{product.price}</p>}
+                  <p className="text-muted-foreground text-[13px] line-clamp-2 leading-relaxed">{product.description || "Tidak ada deskripsi"}</p>
                 </div>
               </motion.div>
             ))}
@@ -282,21 +282,21 @@ export default function ProductsView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
               onClick={closeModal}
             />
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl shadow-2xl z-50 overflow-hidden"
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-card rounded-2xl shadow-2xl z-50 overflow-hidden"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <Package size={18} className="text-indigo-600" />
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/50">
+                <h3 className="font-bold text-foreground flex items-center gap-2">
+                  <Package size={18} className="text-primary" />
                   {editingId ? "Edit Produk" : "Tambah Produk Baru"}
                 </h3>
-                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+                <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg hover:bg-muted">
                   <X size={20} />
                 </button>
               </div>
@@ -304,19 +304,19 @@ export default function ProductsView() {
               <form onSubmit={handleSave} className="p-6 space-y-5 max-h-[70vh] overflow-y-auto scrollbar-thin">
                 {/* Photo Upload Area */}
                 <div className="flex flex-col items-center justify-center">
-                  <div className="w-32 h-32 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center overflow-hidden relative group hover:border-indigo-300 transition-colors">
+                  <div className="w-32 h-32 rounded-2xl border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center overflow-hidden relative group hover:border-primary/50 transition-colors">
                     {imageUrl ? (
                       <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
                       <>
-                        <UploadCloud size={28} className="text-gray-400 mb-2 group-hover:text-indigo-500 transition-colors" />
-                        <span className="text-[11px] font-medium text-gray-500">Upload Foto</span>
+                        <UploadCloud size={28} className="text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
+                        <span className="text-[11px] font-medium text-muted-foreground">Upload Foto</span>
                       </>
                     )}
                     
                     {uploading && (
-                      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
-                        <Loader2 size={24} className="animate-spin text-indigo-600" />
+                      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+                        <Loader2 size={24} className="animate-spin text-primary" />
                       </div>
                     )}
                     
@@ -341,62 +341,62 @@ export default function ProductsView() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Nama Produk <span className="text-red-500">*</span></label>
+                    <label className="block text-[13px] font-semibold text-foreground mb-1.5">Nama Produk <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Contoh: Kopi Susu Gula Aren"
-                      className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px]"
+                      className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Kategori</label>
+                    <label className="block text-[13px] font-semibold text-foreground mb-1.5">Kategori</label>
                     <input
                       type="text"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                       placeholder="Contoh: Minuman"
-                      className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px]"
+                      className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px]"
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Harga</label>
+                  <label className="block text-[13px] font-semibold text-foreground mb-1.5">Harga</label>
                   <input
                     type="text"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     placeholder="Contoh: Rp 25.000"
-                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px]"
+                    className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Deskripsi</label>
+                  <label className="block text-[13px] font-semibold text-foreground mb-1.5">Deskripsi</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Jelaskan detail produk ini..."
                     rows={3}
-                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none text-[15px]"
+                    className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none text-[15px]"
                   />
                 </div>
                 
-                <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100">
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-border">
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 font-medium rounded-xl transition-colors"
+                    className="px-5 py-2.5 text-foreground hover:bg-muted font-medium rounded-xl transition-colors"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={saving || !name.trim()}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
+                    className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-hover text-primary-foreground font-medium rounded-xl transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-md shadow-primary/30"
                   >
                     {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                     Simpan Produk

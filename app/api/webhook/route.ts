@@ -93,10 +93,11 @@ async function processIncomingMessage(
   const messageContent = waMessage.text.body;
 
   let isBotActive = true; 
+  let currentStatus = "new";
 
   const { data: existingSession, error: fetchSessionError } = await supabase
     .from("sessions")
-    .select("is_bot_active")
+    .select("*")
     .eq("phone_number", phoneNumber)
     .single();
 
@@ -118,6 +119,7 @@ async function processIncomingMessage(
     return;
   } else if (existingSession) {
     isBotActive = existingSession.is_bot_active;
+    currentStatus = existingSession.status || "new";
     await supabase
       .from("sessions")
       .update({ last_active: new Date().toISOString() })
@@ -155,6 +157,42 @@ async function processIncomingMessage(
   const aiResponse = await getGeminiResponse(typedHistory, messageContent);
 
   let textToSend = aiResponse;
+
+  // Extract Mood and Lang
+  const moodMatch = textToSend.match(/\[MOOD:(.*?)\]/i);
+  const langMatch = textToSend.match(/\[LANG:(.*?)\]/i);
+  
+  const mood = moodMatch ? moodMatch[1].toLowerCase() : null;
+  const lang = langMatch ? langMatch[1].toLowerCase() : null;
+  
+  if (moodMatch) textToSend = textToSend.replace(moodMatch[0], "").trim();
+  if (langMatch) textToSend = textToSend.replace(langMatch[0], "").trim();
+
+  if (mood || lang) {
+    const parts = currentStatus.split('|');
+    const baseStatus = parts[0] || 'new';
+    const currentMood = parts[1] || 'neutral';
+    const currentLang = parts[2] || 'id';
+    
+    currentStatus = `${baseStatus}|${mood || currentMood}|${lang || currentLang}`;
+    await supabase.from("sessions").update({ status: currentStatus }).eq("phone_number", phoneNumber);
+  }
+  
+  // Handle switch to manual reply
+  const needsManualReply = textToSend.includes("[MANUAL_REPLY]");
+  if (needsManualReply) {
+    textToSend = textToSend.replace(/\[MANUAL_REPLY\]/g, "").trim();
+    
+    const parts = currentStatus.split('|');
+    const newStatus = `pending|${parts[1] || 'neutral'}|${parts[2] || 'id'}`;
+    
+    // Nonaktifkan bot dan set status pending agar disorot admin
+    await supabase
+      .from("sessions")
+      .update({ is_bot_active: false, status: newStatus })
+      .eq("phone_number", phoneNumber);
+  }
+
   const needsQris = textToSend.includes("[QRIS]");
   if (needsQris) {
     textToSend = textToSend.replace(/\[QRIS\]/g, "").trim();

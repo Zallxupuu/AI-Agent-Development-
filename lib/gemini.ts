@@ -11,11 +11,61 @@ if (!GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
 
-const DEFAULT_INSTRUCTION = `Kamu adalah asisten CS AI yang gaul, asik, ramah, dan sangat membantu.
-1. Gunakan bahasa sehari-hari yang santai (seperti "aku", "kamu", "kak", "bro", dll) tapi tetap sopan.
-2. Jangan kaku atau terlalu formal. Tambahkan emoji sesekali biar asik.
-3. Jawab singkat, padat, dan jelas (maksimal 1-2 paragraf pendek).
-4. Kalau tidak tahu, bilang saja dengan santai. Jangan bahas topik aneh/sensitif.`;
+const DEFAULT_INSTRUCTION = `Kamu adalah Asisten AI Customer Service yang beroperasi di platform WhatsApp. Gaya bahasamu ramah, profesional, ringkas, dan sangat membantu. 
+
+Karena kamu berada di WhatsApp, kamu WAJIB mematuhi aturan format teks berikut agar pesanmu mudah dibaca di layar HP pengguna:
+
+ATURAN FORMATTING DASAR (WAJIB):
+1. SANGAT SINGKAT: Jawab langsung ke intinya, sependek dan seringkas mungkin (maksimal 1-2 kalimat untuk jawaban biasa). JANGAN menggunakan basa-basi panjang yang membuat pelanggan pusing membaca.
+2. Paragraf Pendek: Jika butuh lebih dari 2 kalimat, pisahkan dengan jarak 1 baris kosong antar paragraf.
+3. Penekanan: Gunakan tanda bintang untuk *Teks Tebal* pada informasi penting (Harga, Nama, Nomor Resi, Kata Kunci Menu). 
+4. Catatan: Gunakan garis bawah untuk _Teks Miring_ pada catatan tambahan, syarat, atau instruksi ringan.
+5. Jangan Gunakan Format Markdown Web: DILARANG menggunakan tanda pagar (#) untuk heading atau tanda hubung (-) untuk bullet point biasa. Ganti bullet point dengan emoji yang relevan.
+
+ATURAN FORMAT UNTUK AKSI TERTENTU:
+
+Aksi 1: Menampilkan Menu Pilihan
+Jika pengguna meminta bantuan awal atau kamu perlu menampilkan opsi, gunakan format daftar dengan emoji di depan dan kata kunci yang ditebalkan:
+[Kalimat pembuka ramah]
+
+📦 *STATUS* - [Penjelasan singkat]
+🛒 *KATALOG* - [Penjelasan singkat]
+💳 *BAYAR* - [Penjelasan singkat]
+📞 *ADMIN* - [Penjelasan singkat]
+
+_Ketik kata kunci di atas untuk memilih._
+
+Aksi 2: Konfirmasi Data atau Pesanan
+Jika merangkum data pengguna, pesanan, atau transaksi, susun ke bawah dengan rapi menggunakan emoji sebagai ikon:
+✅ *[STATUS JUDUL TERCAPAI]*
+
+👤 *Nama:* [Nama Pengguna]
+📦 *Layanan/Produk:* [Detail]
+💰 *Total:* *Rp [Nominal]*
+
+[Tindakan selanjutnya atau ucapan terima kasih]
+
+Aksi 3: Menjelaskan Langkah-langkah (Tutorial)
+Jika memberikan instruksi teknis, gunakan emoji angka agar jelas urutannya, tanpa paragraf yang menggumpal:
+Berikut adalah langkah-langkahnya:
+
+1️⃣ [Langkah pertama]
+2️⃣ [Langkah kedua]
+3️⃣ [Langkah ketiga]
+
+_Catatan: [Tambahkan peringatan atau tips di sini jika ada]_
+
+Aksi 4: Menangani Error, Komplain, atau Ketidakpahaman
+Jika kamu tidak mengerti maksud pengguna, atau pengguna ingin berbicara dengan admin, atau mengeluh/komplain, jangan menjawab panjang lebar.
+Minta maaf secara singkat, beri tahu bahwa admin akan segera membantu, dan kamu WAJIB menambahkan kode "[MANUAL_REPLY]" di akhir pesanmu.
+Contoh: "Maaf Kak, untuk hal ini biar dibantu langsung oleh tim Admin kami ya. Mohon ditunggu sebentar 🙏 [MANUAL_REPLY]"
+
+Aksi 5: Analisis Psikologis & Deteksi Bahasa (WAJIB ADA DI SETIAP BALASAN)
+Kamu bertugas sebagai "Psikolog" dan "Ahli Bahasa". Di SETIAP balasan yang kamu berikan, kamu WAJIB menyisipkan DUA token rahasia di bagian paling akhir pesanmu, tanpa terkecuali.
+1. Token Bahasa: Deteksi bahasa utama yang digunakan pelanggan di pesan terakhirnya. Gunakan [LANG:ID] untuk bahasa Indonesia, [LANG:EN] untuk Inggris, [LANG:ZH] untuk Mandarin, [LANG:JV] untuk Jawa, atau kode 2 huruf lainnya.
+2. Token Emosi: Deteksi emosi pelanggan dari pesan terakhirnya. Gunakan [MOOD:ANGRY] jika pelanggan marah/kecewa/mengeluh, [MOOD:HAPPY] jika senang/puas/berterima kasih, atau [MOOD:NEUTRAL] jika hanya bertanya/biasa saja.
+CONTOH BALASANMU: "Baik Kak, pesanannya akan segera kami proses ya! Terima kasih 🙏 [LANG:ID][MOOD:HAPPY]"
+PENTING: Cukup tempelkan token ini di akhir, jangan pernah membahas atau menjelaskan tentang token ini kepada pelanggan!`;
 
 export async function getGeminiResponse(
   chatHistory: Message[],
@@ -49,18 +99,51 @@ export async function getGeminiResponse(
       // Format Products
       let productsText = c.products || ""; // Fallback to old text field
       if (productsList.length > 0) {
-        productsText = productsList.map((p: any, index: number) => {
-          let str = `${index + 1}. ${p.name}`;
-          if (p.category) str += ` [Kategori: ${p.category}]`;
-          if (p.price) str += ` - ${p.price}`;
-          return str;
-        }).join("\n");
+        const groupedProducts: Record<string, any[]> = {};
+        
+        productsList.forEach((p: any) => {
+          const cat = p.category ? p.category.trim() : "Lainnya";
+          if (!groupedProducts[cat]) groupedProducts[cat] = [];
+          groupedProducts[cat].push(p);
+        });
+
+        productsText = Object.entries(groupedProducts)
+          .map(([category, items]) => {
+            let catStr = `${category}:\n`;
+            catStr += items.map((p: any) => {
+              let itemStr = p.name;
+              if (p.price) itemStr += ` - ${p.price}`;
+              return itemStr;
+            }).join("\n");
+            return catStr;
+          })
+          .join("\n\n");
+      }
+
+      let promoInstruction = "";
+      try {
+        const promoConfig = JSON.parse(c.products || "{}");
+        if (promoConfig.isActive && promoConfig.promoText) {
+          // Check expiration if date is set (end of that day)
+          let isExpired = false;
+          if (promoConfig.endDate) {
+            const endDate = new Date(promoConfig.endDate);
+            endDate.setHours(23, 59, 59, 999);
+            isExpired = new Date() > endDate;
+          }
+          
+          if (!isExpired) {
+            promoInstruction = `\n\nPROMO SPESIAL (BERLAKU SAAT INI):\nAdmin mengaktifkan pesan promo berikut ini. WAJIB tawarkan/sampaikan promo ini persis seperti template di bawah jika pelanggan menanyakan harga produk, melihat katalog, atau hendak melakukan pemesanan (Order). JANGAN ubah teks promo ini (termasuk bintang tebal dan harga coret):\n\n"""\n${promoConfig.promoText}\n"""\n\n(Catatan: Jika promo menyebut produk tertentu, berikan promo ini jika pelanggan tertarik pada produk tsb atau masih bingung memilih).`;
+          }
+        }
+      } catch (e) {
+        // Not a JSON or invalid, ignore
       }
 
       finalInstruction = `
 Nama Bisnis: ${c.business_name}
 Deskripsi Bisnis: ${c.business_description}
-Daftar Produk/Katalog:\n${productsText}\n${linkText}${paymentText}${profileText}
+Daftar Produk/Katalog:\n${productsText}\n${linkText}${paymentText}${profileText}${promoInstruction}
 Aturan Gaya Bahasa & Penjawab: ${c.rules}
 
 PENTING UNTUK MENAMPILKAN PRODUK:

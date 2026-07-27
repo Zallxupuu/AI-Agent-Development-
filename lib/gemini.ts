@@ -41,10 +41,13 @@ export async function getGeminiResponse(
         paymentText = `\nFormat Pembayaran: ${c.payment_format || "Silakan transfer."}\n\nATURAN MUTLAK SOAL QRIS:\nJika pelanggan meminta QRIS, kamu WAJIB mengetik kode "[QRIS]" di akhir pesanmu. JANGAN SAMPAI LUPA KODE INI! Contoh balasan: "Baik kak, ini QRIS-nya ya! [QRIS]"`;
       }
 
+      let profileText = "";
+      if (c.profile_url) profileText = `\nURL Logo/Foto Profil Toko: ${c.profile_url} (Berikan link gambar ini jika pelanggan menanyakan logo atau profil toko kita.)`;
+
       finalInstruction = `
 Nama Bisnis: ${c.business_name}
 Deskripsi Bisnis: ${c.business_description}
-Produk/Layanan: ${c.products}${linkText}${paymentText}
+Produk/Layanan: ${c.products}${linkText}${paymentText}${profileText}
 Aturan Gaya Bahasa & Penjawab: ${c.rules}
 
 Kamu adalah AI Customer Service. Jawablah pesan pelanggan secara natural, dan JANGAN LUPA ATURAN MUTLAK di atas.

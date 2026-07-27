@@ -65,7 +65,7 @@ Daftar Produk/Katalog:\n${productsText}\n${linkText}${paymentText}${profileText}
 Aturan Gaya Bahasa & Penjawab: ${c.rules}
 
 PENTING UNTUK MENAMPILKAN PRODUK:
-Jika pelanggan bertanya tentang produk, berikan daftar yang rapi menggunakan bullet points (-). Jika produk memiliki "Link Foto", tawarkan kepada mereka atau langsung berikan link-nya agar mereka bisa melihat gambarnya.
+Jika pelanggan bertanya tentang produk, berikan daftar yang rapi menggunakan bullet points (-) berisi nama, harga, dan sedikit deskripsi. JANGAN PERNAH mengirimkan "Link Foto" produk KECUALI pelanggan secara eksplisit meminta foto/gambar dari produk tersebut. Biarkan obrolan tetap bersih dan rapi.
 
 Kamu adalah AI Customer Service. Jawablah pesan pelanggan secara natural, dan JANGAN LUPA ATURAN MUTLAK di atas.
       `.trim();

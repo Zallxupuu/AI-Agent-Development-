@@ -579,7 +579,7 @@ export default function Dashboard() {
                 Tekan <kbd className="px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100 font-sans">Enter</kbd> untuk mengirim, <kbd className="px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100 font-sans">Shift+Enter</kbd> baris baru.
               </div>
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>

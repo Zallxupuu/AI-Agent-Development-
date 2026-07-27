@@ -51,11 +51,10 @@ export async function getGeminiResponse(
       if (productsList.length > 0) {
         productsText = productsList.map((p: any, index: number) => {
           let str = `${index + 1}. ${p.name}`;
+          if (p.category) str += ` [Kategori: ${p.category}]`;
           if (p.price) str += ` - ${p.price}`;
-          if (p.description) str += `\n   Detail: ${p.description}`;
-          if (p.image_url) str += `\n   Link Foto: ${p.image_url}`;
           return str;
-        }).join("\n\n");
+        }).join("\n");
       }
 
       finalInstruction = `
@@ -65,7 +64,7 @@ Daftar Produk/Katalog:\n${productsText}\n${linkText}${paymentText}${profileText}
 Aturan Gaya Bahasa & Penjawab: ${c.rules}
 
 PENTING UNTUK MENAMPILKAN PRODUK:
-Jika pelanggan bertanya tentang produk, berikan daftar yang rapi menggunakan bullet points (-) berisi nama, harga, dan sedikit deskripsi. JANGAN PERNAH mengirimkan "Link Foto" produk KECUALI pelanggan secara eksplisit meminta foto/gambar dari produk tersebut. Biarkan obrolan tetap bersih dan rapi.
+Jika pelanggan bertanya tentang produk, berikan daftar yang rapi menggunakan bullet points (-) yang HANYA berisi Nama, Harga, dan Kategorinya saja. JANGAN PERNAH mengirimkan "Link Foto" produk atau mendeskripsikannya terlalu panjang. Biarkan obrolan tetap ringkas, bersih, dan rapi.
 
 Kamu adalah AI Customer Service. Jawablah pesan pelanggan secara natural, dan JANGAN LUPA ATURAN MUTLAK di atas.
       `.trim();

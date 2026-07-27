@@ -14,6 +14,7 @@ export default function ProductsView() {
   
   // Form state
   const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -54,6 +55,7 @@ export default function ProductsView() {
 
   const resetForm = () => {
     setName("");
+    setCategory("");
     setDescription("");
     setPrice("");
     setImageUrl("");
@@ -67,6 +69,7 @@ export default function ProductsView() {
 
   const openEditModal = (product: Product) => {
     setName(product.name);
+    setCategory(product.category || "");
     setDescription(product.description || "");
     setPrice(product.price || "");
     setImageUrl(product.image_url || "");
@@ -123,6 +126,7 @@ export default function ProductsView() {
     try {
       const productData = {
         name,
+        category,
         description,
         price,
         image_url: imageUrl,
@@ -253,7 +257,14 @@ export default function ProductsView() {
                 </div>
                 
                 <div className="p-5">
-                  <h3 className="font-semibold text-gray-800 text-[15px] truncate mb-1">{product.name}</h3>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="font-semibold text-gray-800 text-[15px] truncate">{product.name}</h3>
+                    {product.category && (
+                      <span className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
+                        {product.category}
+                      </span>
+                    )}
+                  </div>
                   {product.price && <p className="text-indigo-600 font-bold text-[14px] mb-2">{product.price}</p>}
                   <p className="text-gray-500 text-[13px] line-clamp-2 leading-relaxed">{product.description || "Tidak ada deskripsi"}</p>
                 </div>
@@ -328,16 +339,28 @@ export default function ProductsView() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Nama Produk <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Contoh: Kopi Susu Gula Aren"
-                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px]"
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Nama Produk <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Contoh: Kopi Susu Gula Aren"
+                      className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Kategori</label>
+                    <input
+                      type="text"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="Contoh: Minuman"
+                      className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-[15px]"
+                    />
+                  </div>
                 </div>
                 
                 <div>

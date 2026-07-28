@@ -134,8 +134,46 @@ export default function Dashboard() {
 
     fetchConfig();
 
+    // Request Notification permission
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+
+    // Global listener for new messages to trigger notifications
+    const globalMessagesChannel = supabaseClient
+      .channel('global_messages')
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const newMsg = payload.new as Message;
+          if (newMsg.role === 'client' && typeof window !== 'undefined') {
+            // Check if permission granted
+            if ('Notification' in window && Notification.permission === 'granted') {
+              let body = newMsg.content;
+              if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
+              
+              const notification = new Notification(`Pesan dari ${newMsg.phone_number}`, {
+                body: body,
+                icon: '/favicon.ico' // Default icon fallback
+              });
+              
+              // Optional audio ping
+              try {
+                // If we don't have a file, Audio constructor might fail or do nothing, 
+                // but the system notification sound usually plays automatically on Windows/macOS.
+              } catch (e) {}
+            }
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabaseClient.removeChannel(sessionsChannel);
+      supabaseClient.removeChannel(globalMessagesChannel);
     };
   }, []);
 
@@ -687,7 +725,26 @@ export default function Dashboard() {
                                   )}
                                 </div>
                               )}
-                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                              {/* Render Content */}
+                              {msg.content.match(/\[IMAGE:(.*?)\]/) ? (
+                                <>
+                                  {msg.content.replace(/\[IMAGE:.*?\]/g, "").trim() && (
+                                    <p className="whitespace-pre-wrap break-words mb-2">
+                                      {msg.content.replace(/\[IMAGE:.*?\]/g, "").trim()}
+                                    </p>
+                                  )}
+                                  <div className="rounded-lg overflow-hidden border border-border/20 max-w-[240px] mt-2 relative bg-black/5">
+                                    <img 
+                                      src={`/api/media/${msg.content.match(/\[IMAGE:(.*?)\]/)?.[1]}`} 
+                                      alt="Bukti Transfer" 
+                                      className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
+                                      loading="lazy"
+                                    />
+                                  </div>
+                                </>
+                              ) : (
+                                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                              )}
                               
                               {/* Timestamp */}
                               <div className={`text-[10px] mt-2 flex items-center ${isClient ? "justify-start text-muted-foreground" : "justify-end text-primary-foreground/70"}`}>

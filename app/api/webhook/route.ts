@@ -87,8 +87,9 @@ async function processIncomingMessage(
   let messageContent = "";
   if (waMessage.type === "text" && waMessage.text?.body) {
     messageContent = waMessage.text.body;
-  } else if (waMessage.type === "image") {
-    messageContent = "[Pelanggan mengirim sebuah gambar/foto bukti]";
+  } else if (waMessage.type === "image" && waMessage.image?.id) {
+    const caption = waMessage.image.caption ? ` Caption: ${waMessage.image.caption}` : "";
+    messageContent = `[Pelanggan mengirim gambar/foto bukti] [IMAGE:${waMessage.image.id}]${caption}`;
   } else {
     console.log(`[Webhook] Pesan tipe ${waMessage.type} diabaikan.`);
     return;

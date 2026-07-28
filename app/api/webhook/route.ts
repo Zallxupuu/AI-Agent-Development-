@@ -84,13 +84,17 @@ export async function POST(request: NextRequest): Promise<Response> {
 async function processIncomingMessage(
   waMessage: WhatsAppMessage
 ): Promise<void> {
-  if (waMessage.type !== "text" || !waMessage.text?.body) {
-    console.log(`[Webhook] Pesan non-teks diabaikan.`);
+  let messageContent = "";
+  if (waMessage.type === "text" && waMessage.text?.body) {
+    messageContent = waMessage.text.body;
+  } else if (waMessage.type === "image") {
+    messageContent = "[Pelanggan mengirim sebuah gambar/foto bukti]";
+  } else {
+    console.log(`[Webhook] Pesan tipe ${waMessage.type} diabaikan.`);
     return;
   }
 
   const phoneNumber = waMessage.from;
-  const messageContent = waMessage.text.body;
 
   let isBotActive = true; 
   let currentStatus = "new";

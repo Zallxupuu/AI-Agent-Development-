@@ -37,11 +37,40 @@ export async function sendWhatsAppMessage(
   return response;
 }
 
+export async function uploadMedia(file: File, type: string = "image/jpeg"): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("type", type);
+  formData.append("messaging_product", "whatsapp");
+
+  const response = await fetch(`https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/media`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[WhatsApp API Error] Upload Media Status: ${response.status}, Body: ${errorBody}`);
+    throw new Error(`WhatsApp API Media Upload error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.id;
+}
+
 export async function sendWhatsAppImage(
   to: string,
-  imageUrl: string,
-  caption?: string
+  mediaIdOrUrl: string,
+  caption?: string,
+  isUrl: boolean = false
 ): Promise<Response> {
+  const imagePayload = isUrl 
+    ? { link: mediaIdOrUrl, caption: caption || "" }
+    : { id: mediaIdOrUrl, caption: caption || "" };
+
   const response = await fetch(WA_API_URL, {
     method: "POST",
     headers: {
@@ -53,10 +82,7 @@ export async function sendWhatsAppImage(
       recipient_type: "individual",
       to,
       type: "image",
-      image: {
-        link: imageUrl,
-        caption: caption || "",
-      },
+      image: imagePayload,
     }),
   });
 

@@ -22,7 +22,9 @@ import {
   ArrowLeft,
   Package,
   Tag,
-  LayoutDashboard
+  LayoutDashboard,
+  Paperclip,
+  X
 } from "@/components/Icons";
 
 const parseStatus = (statusStr: string | undefined) => {
@@ -65,6 +67,8 @@ export default function Dashboard() {
 
   // State for Input & Sending
   const [inputValue, setInputValue] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -238,18 +242,27 @@ export default function Dashboard() {
   // 4. Handle sending manual reply
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || !selectedPhone || isSending) return;
+    if ((!inputValue.trim() && !selectedImage) || !selectedPhone || isSending) return;
 
     setIsSending(true);
     setError(null);
     const content = inputValue;
+    const currentImage = selectedImage;
+    
     setInputValue(""); // Optimistic clear
+    setSelectedImage(null);
 
     try {
+      const formData = new FormData();
+      formData.append("phone_number", selectedPhone);
+      formData.append("content", content);
+      if (currentImage) {
+        formData.append("image", currentImage);
+      }
+
       const res = await fetch("/api/manual-reply", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_number: selectedPhone, content }),
+        body: formData,
       });
 
       const result = await res.json();
@@ -261,6 +274,7 @@ export default function Dashboard() {
       console.error("Send message error:", err);
       setError(err.message || "Gagal mengirim pesan.");
       setInputValue(content); // Restore input on error
+      setSelectedImage(currentImage);
     } finally {
       setIsSending(false);
     }
@@ -782,25 +796,64 @@ export default function Dashboard() {
 
               <form 
                 onSubmit={handleSendMessage}
-                className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto"
+                className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto flex-col"
               >
-                <div className="flex-1 bg-muted rounded-2xl border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 overflow-hidden shadow-inner flex items-center px-3 md:px-4 py-2 min-h-[52px]">
-                  <textarea
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage(e);
-                      }
-                    }}
-                    placeholder={activeSession?.is_bot_active ? "Ketik pesan (Auto-reply AI masih aktif)..." : "Ketik balasan Anda..."}
-                    className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-foreground placeholder-muted-foreground py-2 max-h-32 text-[14px] md:text-[15px]"
-                    rows={1}
-                    style={{ height: 'auto', minHeight: '1.5rem' }}
-                    disabled={isSending}
-                  />
-                </div>
+                {selectedImage && (
+                  <div className="w-full flex justify-start">
+                    <div className="relative group rounded-xl overflow-hidden border border-border/50 max-w-[200px] shadow-sm">
+                      <img 
+                        src={URL.createObjectURL(selectedImage)} 
+                        alt="Preview" 
+                        className="w-full h-auto object-cover max-h-[150px]"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setSelectedImage(null)}
+                        className="absolute top-1 right-1 bg-black/60 text-white p-1 rounded-full hover:bg-red-500 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-end gap-2 md:gap-3 w-full">
+                  <div className="flex-1 bg-muted rounded-2xl border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 overflow-hidden shadow-inner flex items-center px-3 md:px-4 py-2 min-h-[52px]">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-muted-foreground hover:text-primary transition-colors mr-2"
+                      title="Lampirkan Gambar"
+                    >
+                      <Paperclip size={20} />
+                    </button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setSelectedImage(file);
+                        e.target.value = "";
+                      }}
+                      className="hidden"
+                    />
+                    <textarea
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(e);
+                        }
+                      }}
+                      placeholder={activeSession?.is_bot_active ? "Ketik pesan (Auto-reply AI masih aktif)..." : "Ketik balasan Anda..."}
+                      className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-foreground placeholder-muted-foreground py-2 max-h-32 text-[14px] md:text-[15px]"
+                      rows={1}
+                      style={{ height: 'auto', minHeight: '1.5rem' }}
+                      disabled={isSending}
+                    />
+                  </div>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.95 }}
@@ -814,6 +867,7 @@ export default function Dashboard() {
                     <Send size={18} className="ml-0.5" />
                   )}
                 </motion.button>
+                </div>
               </form>
               <div className="text-center mt-3 text-[11px] text-muted-foreground font-medium tracking-wide">
                 Tekan <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-sans">Enter</kbd> untuk mengirim, <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-sans">Shift+Enter</kbd> baris baru.

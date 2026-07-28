@@ -166,7 +166,12 @@ async function processIncomingMessage(
   // Extract Mood, Lang, and Payment
   const moodMatch = textToSend.match(/\[MOOD:(.*?)\]/i);
   const langMatch = textToSend.match(/\[LANG:(.*?)\]/i);
-  const paymentMatch = textToSend.includes("[PAYMENT_CLAIMED]");
+  
+  // Deteksi pembayaran ganda: lewat AI (PAYMENT_CLAIMED), lewat Gambar (semua gambar dianggap butuh admin), atau Regex kata kunci
+  const paymentMatch = 
+    textToSend.includes("[PAYMENT_CLAIMED]") || 
+    messageContent.includes("[IMAGE:") || 
+    /transfer|udah bayar|sudah bayar|lunas|tf|struk|bukti/i.test(messageContent);
   
   const mood = moodMatch ? moodMatch[1].toLowerCase() : null;
   const lang = langMatch ? langMatch[1].toLowerCase() : null;

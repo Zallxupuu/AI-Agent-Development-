@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [config, setConfig] = useState<AiConfig | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [unreadSessions, setUnreadSessions] = useState<Set<string>>(new Set());
 
   // State for Messages
   const [messages, setMessages] = useState<Message[]>([]);
@@ -146,8 +147,6 @@ export default function Dashboard() {
     };
 
     fetchConfig();
-
-    // Request Notification permission
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
         Notification.requestPermission();
@@ -165,6 +164,13 @@ export default function Dashboard() {
           if (newMsg.role === 'client' && typeof window !== 'undefined') {
             let body = newMsg.content;
             if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
+
+            // Mark as unread if not currently selected
+            setUnreadSessions(prev => {
+              // Note: selectedPhone is captured in closure, to be safe we always add it 
+              // and the useEffect will immediately remove it if it matches selectedPhone.
+              return new Set(prev).add(newMsg.phone_number);
+            });
 
             // 1. In-app Toast Notification (using Sonner)
             const sortedSessions = [...sessionsRef.current].sort((a,b) => a.phone_number.localeCompare(b.phone_number));
@@ -219,6 +225,20 @@ export default function Dashboard() {
       supabaseClient.removeChannel(globalMessagesChannel);
     };
   }, []);
+
+  // Clear unread mark when selecting a phone
+  useEffect(() => {
+    if (selectedPhone) {
+      setUnreadSessions(prev => {
+        const next = new Set(prev);
+        if (next.has(selectedPhone)) {
+          next.delete(selectedPhone);
+          return next;
+        }
+        return prev;
+      });
+    }
+  }, [selectedPhone]);
 
   // 2. Fetch messages when a session is selected & Subscribe to messages
   useEffect(() => {
@@ -495,16 +515,24 @@ export default function Dashboard() {
                     
                     {isSidebarCollapsed ? (
                       <div className="flex flex-col items-center justify-center w-full gap-2">
-                         <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
-                            C{stableIndex + 1}
+                         <div className="relative">
+                           <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
+                              C{stableIndex + 1}
+                           </div>
+                           {unreadSessions.has(session.phone_number) && (
+                             <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-background animate-pulse" />
+                           )}
                          </div>
                          <div className={`w-2 h-2 rounded-full ${session.is_bot_active ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                       </div>
                     ) : (
                       <>
                         <div className="flex justify-between items-center w-full">
-                          <span className="font-medium text-[15px] truncate text-foreground">
+                          <span className="font-medium text-[15px] truncate text-foreground flex items-center gap-2">
                             {clientName}
+                            {unreadSessions.has(session.phone_number) && (
+                              <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                            )}
                           </span>
                           <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
                             <Clock size={10} />

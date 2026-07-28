@@ -7,6 +7,7 @@ import SettingsView from "@/components/SettingsView";
 import ProductsView from "@/components/ProductsView";
 import DashboardOverview from "@/components/DashboardOverview";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { toast } from "sonner";
 import type { Session, Message, AiConfig } from "@/lib/types";
 import { 
   Bot, 
@@ -24,8 +25,10 @@ import {
   Tag,
   LayoutDashboard,
   Paperclip,
-  X
+  X,
+  Archive
 } from "@/components/Icons";
+import BackupsView from "@/components/BackupsView";
 
 const parseStatus = (statusStr: string | undefined) => {
   if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id', payment: 'unpaid' };
@@ -56,6 +59,12 @@ const getLangFlag = (lang: string) => {
 export default function Dashboard() {
   // State for Sessions
   const [sessions, setSessions] = useState<Session[]>([]);
+  const sessionsRef = useRef<Session[]>([]);
+  
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [config, setConfig] = useState<AiConfig | null>(null);
@@ -154,11 +163,42 @@ export default function Dashboard() {
         (payload) => {
           const newMsg = payload.new as Message;
           if (newMsg.role === 'client' && typeof window !== 'undefined') {
-            // Check if permission granted
+            let body = newMsg.content;
+            if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
+
+            // 1. In-app Toast Notification (using Sonner)
+            const sortedSessions = [...sessionsRef.current].sort((a,b) => a.phone_number.localeCompare(b.phone_number));
+            const stableIndex = sortedSessions.findIndex(s => s.phone_number === newMsg.phone_number);
+            const senderName = stableIndex !== -1 ? `Client ${stableIndex + 1}` : `Client Baru`;
+            
+            toast.custom((t) => (
+              <div 
+                onClick={() => {
+                  setSelectedPhone(newMsg.phone_number);
+                  toast.dismiss(t);
+                  if (window.innerWidth < 768) {
+                    setIsSidebarCollapsed(true);
+                  }
+                }}
+                className="bg-card text-card-foreground border-l-4 border-l-primary border-y border-r border-y-border border-r-border shadow-xl p-4 rounded-xl flex flex-col gap-1.5 cursor-pointer hover:bg-muted/40 transition-all w-full min-w-[320px]"
+              >
+                <div className="font-bold text-base flex items-center gap-2 text-foreground">
+                  <div className="bg-primary/20 p-1.5 rounded-full text-primary">
+                    <MessageSquare size={18} />
+                  </div>
+                  {senderName}
+                </div>
+                <div className="text-[14px] text-muted-foreground line-clamp-2 pl-9">
+                  {body}
+                </div>
+              </div>
+            ), {
+              duration: 5000,
+              position: 'top-center'
+            });
+
+            // 2. OS-level Browser Notification
             if ('Notification' in window && Notification.permission === 'granted') {
-              let body = newMsg.content;
-              if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
-              
               const notification = new Notification(`Pesan dari ${newMsg.phone_number}`, {
                 body: body,
                 icon: '/favicon.ico' // Default icon fallback
@@ -166,8 +206,7 @@ export default function Dashboard() {
               
               // Optional audio ping
               try {
-                // If we don't have a file, Audio constructor might fail or do nothing, 
-                // but the system notification sound usually plays automatically on Windows/macOS.
+                // ...
               } catch (e) {}
             }
           }
@@ -433,7 +472,6 @@ export default function Dashboard() {
             <div className="divide-y divide-border">
               <AnimatePresence>
                 {sessions.map((session, index) => {
-                  // Stable client name based on phone string sorted alphabetically
                   const stableIndex = [...sessions].sort((a,b) => a.phone_number.localeCompare(b.phone_number)).findIndex(s => s.phone_number === session.phone_number);
                   const clientName = `Client ${stableIndex + 1}`;
                   
@@ -545,6 +583,21 @@ export default function Dashboard() {
             </div>
             {!isSidebarCollapsed && "Pengaturan AI"}
           </button>
+
+          <button
+            onClick={() => setSelectedPhone("BACKUPS")}
+            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 py-2.5 px-4'} rounded-xl font-medium transition-all duration-200 ${
+              selectedPhone === "BACKUPS"
+                ? "bg-primary/20 text-primary shadow-sm"
+                : "bg-transparent border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+            title="Backup Data"
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedPhone === "BACKUPS" ? "bg-primary/20" : "bg-muted text-muted-foreground"}`}>
+              <Archive size={16} />
+            </div>
+            {!isSidebarCollapsed && "Backup Data"}
+          </button>
           
           <div className={`mt-2 flex ${isSidebarCollapsed ? 'justify-center' : 'px-2'}`}>
             <ThemeToggle isCollapsed={isSidebarCollapsed} />
@@ -562,18 +615,18 @@ export default function Dashboard() {
           </div>
         )}
 
-        {selectedPhone === "SETTINGS" || selectedPhone === "PRODUCTS" || selectedPhone === "DASHBOARD" ? (
+        {selectedPhone === "SETTINGS" || selectedPhone === "PRODUCTS" || selectedPhone === "DASHBOARD" || selectedPhone === "BACKUPS" ? (
           <>
             <header className="md:hidden h-14 px-4 bg-card/80 backdrop-blur-md border-b border-border flex flex-shrink-0 items-center gap-3 sticky top-0 z-50">
               <button onClick={() => setSelectedPhone(null)} className="p-1.5 -ml-1 hover:bg-muted rounded-lg text-muted-foreground transition-colors">
                 <ArrowLeft size={20} />
               </button>
               <h2 className="font-semibold text-foreground text-sm">
-                {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : "Dashboard Utama"}
+                {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : selectedPhone === "BACKUPS" ? "Backup Data" : "Dashboard Utama"}
               </h2>
             </header>
             <div className="flex-1 overflow-y-auto">
-              {selectedPhone === "SETTINGS" ? <SettingsView /> : selectedPhone === "PRODUCTS" ? <ProductsView /> : <DashboardOverview />}
+              {selectedPhone === "SETTINGS" ? <SettingsView /> : selectedPhone === "PRODUCTS" ? <ProductsView /> : selectedPhone === "BACKUPS" ? <BackupsView /> : <DashboardOverview />}
             </div>
           </>
         ) : !selectedPhone ? (
@@ -727,7 +780,7 @@ export default function Dashboard() {
                                   ? "bg-card text-card-foreground border border-border rounded-bl-sm shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
                                   : isAi
                                   ? "bg-primary text-primary-foreground rounded-br-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.4)]"
-                                  : "bg-foreground text-background rounded-br-sm shadow-[0_4px_14px_-6px_rgba(0,0,0,0.4)]"
+                                  : "bg-emerald-600 text-white rounded-br-sm shadow-[0_4px_14px_-6px_rgba(5,150,105,0.4)]"
                               }`}
                             >
                               {!isClient && (
@@ -761,7 +814,13 @@ export default function Dashboard() {
                               )}
                               
                               {/* Timestamp */}
-                              <div className={`text-[10px] mt-2 flex items-center ${isClient ? "justify-start text-muted-foreground" : "justify-end text-primary-foreground/70"}`}>
+                              <div className={`text-[10px] mt-2 flex items-center ${
+                                isClient 
+                                  ? "justify-start text-muted-foreground" 
+                                  : isAi 
+                                    ? "justify-end text-primary-foreground/70"
+                                    : "justify-end text-white/70"
+                              }`}>
                                 {formatTime(msg.created_at)}
                                 {(!isClient) && <CheckCircle2 size={10} className="ml-1 opacity-80" />}
                               </div>

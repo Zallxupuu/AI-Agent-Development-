@@ -219,8 +219,8 @@ export default function ProductsView() {
             <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6 text-muted-foreground/50">
               <Package size={48} />
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Katalog Masih Kosong</h3>
-            <p className="text-muted-foreground max-w-md mb-8">Anda belum menambahkan produk apa pun. Tambahkan produk sekarang agar AI bisa merekomendasikannya ke pelanggan.</p>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Katalog Produk Masih Kosong</h3>
+            <p className="text-muted-foreground max-w-md mb-8">Tambahkan daftar harga top up (Diamond, UC, dll) agar AI bisa merekomendasikannya ke pelanggan secara otomatis.</p>
             <button
               onClick={openAddModal}
               className="flex items-center gap-2 px-6 py-2.5 bg-card border border-border hover:border-primary/50 hover:bg-primary/10 hover:text-primary text-foreground font-medium rounded-xl transition-all shadow-sm"
@@ -346,7 +346,7 @@ export default function ProductsView() {
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Contoh: Kopi Susu Gula Aren"
+                      placeholder="Contoh: 86 Diamonds MLBB"
                       className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px]"
                       required
                     />
@@ -357,7 +357,7 @@ export default function ProductsView() {
                       type="text"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      placeholder="Contoh: Minuman"
+                      placeholder="Contoh: Mobile Legends"
                       className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px]"
                     />
                   </div>
@@ -369,7 +369,7 @@ export default function ProductsView() {
                     type="text"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="Contoh: Rp 25.000"
+                    placeholder="Contoh: Rp 20.000"
                     className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px]"
                   />
                 </div>
@@ -379,7 +379,7 @@ export default function ProductsView() {
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Jelaskan detail produk ini..."
+                    placeholder="Contoh: Proses via ID + Server. 1-3 Menit Masuk."
                     rows={3}
                     className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none text-[15px]"
                   />

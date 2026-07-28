@@ -125,9 +125,17 @@ export async function getGeminiResponse(
       }
 
       let promoInstruction = "";
+      let manualTrainingData = "";
       try {
         const promoConfig = JSON.parse(c.products || "{}");
-        if (promoConfig.isActive && promoConfig.promoText) {
+        
+        // Extract training data
+        if (promoConfig.trainingData) {
+          manualTrainingData = `\n\nDATA LATIH (KNOWLEDGE BASE / PRICELIST):\nPelajari dan gunakan informasi berikut untuk menjawab pertanyaan pelanggan:\n"""\n${promoConfig.trainingData}\n"""\n`;
+        }
+
+        // Extract promo
+        if (promoConfig.active && promoConfig.text) {
           // Check expiration if date is set (end of that day)
           let isExpired = false;
           if (promoConfig.endDate) {
@@ -137,7 +145,7 @@ export async function getGeminiResponse(
           }
           
           if (!isExpired) {
-            promoInstruction = `\n\nPROMO SPESIAL (BERLAKU SAAT INI):\nAdmin mengaktifkan pesan promo berikut ini. WAJIB tawarkan/sampaikan promo ini persis seperti template di bawah jika pelanggan menanyakan harga produk, melihat katalog, atau hendak melakukan pemesanan (Order). JANGAN ubah teks promo ini (termasuk bintang tebal dan harga coret):\n\n"""\n${promoConfig.promoText}\n"""\n\n(Catatan: Jika promo menyebut produk tertentu, berikan promo ini jika pelanggan tertarik pada produk tsb atau masih bingung memilih).`;
+            promoInstruction = `\n\nPROMO SPESIAL (BERLAKU SAAT INI):\nAdmin mengaktifkan pesan promo berikut ini. WAJIB tawarkan/sampaikan promo ini persis seperti template di bawah jika pelanggan menanyakan harga produk, melihat katalog, atau hendak melakukan pemesanan (Order). JANGAN ubah teks promo ini (termasuk bintang tebal dan harga coret):\n\n"""\n${promoConfig.text}\n"""\n\n(Catatan: Jika promo menyebut produk tertentu, berikan promo ini jika pelanggan tertarik pada produk tsb atau masih bingung memilih).`;
           }
         }
       } catch (e) {
@@ -147,7 +155,7 @@ export async function getGeminiResponse(
       finalInstruction = `
 Nama Bisnis: ${c.business_name}
 Deskripsi Bisnis: ${c.business_description}
-Daftar Produk/Katalog:\n${productsText}\n${linkText}${paymentText}${profileText}${promoInstruction}
+Daftar Produk/Katalog Database:\n${productsText}\n${manualTrainingData}${linkText}${paymentText}${profileText}${promoInstruction}
 Aturan Gaya Bahasa & Penjawab: ${c.rules}
 
 PENTING UNTUK MENAMPILKAN PRODUK:

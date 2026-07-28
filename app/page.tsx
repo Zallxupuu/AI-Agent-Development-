@@ -29,14 +29,13 @@ import {
 } from "@/components/Icons";
 
 const parseStatus = (statusStr: string | undefined) => {
-  if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id', payment: 'unpaid', name: '' };
+  if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id', payment: 'unpaid' };
   const parts = statusStr.split('|');
   return {
     base: parts[0] || 'new',
     mood: parts[1] || 'neutral',
     lang: parts[2] || 'id',
-    payment: parts[3] || 'unpaid',
-    name: parts[4] || ''
+    payment: parts[3] || 'unpaid'
   };
 };
 
@@ -166,13 +165,9 @@ export default function Dashboard() {
             if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
 
             // 1. In-app Toast Notification (using Sonner)
-            const senderSession = sessionsRef.current.find(s => s.phone_number === newMsg.phone_number);
-            let senderName = newMsg.phone_number;
-            if (senderSession?.status) {
-              const parsed = parseStatus(senderSession.status);
-              if (parsed.name) senderName = parsed.name;
-            }
-            
+            const sortedSessions = [...sessionsRef.current].sort((a,b) => a.phone_number.localeCompare(b.phone_number));
+            const stableIndex = sortedSessions.findIndex(s => s.phone_number === newMsg.phone_number);
+            const senderName = stableIndex !== -1 ? `Client ${stableIndex + 1}` : `Client Baru`;
             
             toast.custom((t) => (
               <div 
@@ -475,8 +470,8 @@ export default function Dashboard() {
             <div className="divide-y divide-border">
               <AnimatePresence>
                 {sessions.map((session, index) => {
-                  const parsedStatus = parseStatus(session.status);
-                  const clientName = parsedStatus.name || `+${session.phone_number}`;
+                  const stableIndex = [...sessions].sort((a,b) => a.phone_number.localeCompare(b.phone_number)).findIndex(s => s.phone_number === session.phone_number);
+                  const clientName = `Client ${stableIndex + 1}`;
                   
                   return (
                     <motion.button
@@ -499,7 +494,7 @@ export default function Dashboard() {
                     {isSidebarCollapsed ? (
                       <div className="flex flex-col items-center justify-center w-full gap-2">
                          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
-                            {clientName.substring(0, 2).toUpperCase()}
+                            C{stableIndex + 1}
                          </div>
                          <div className={`w-2 h-2 rounded-full ${session.is_bot_active ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                       </div>

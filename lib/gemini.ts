@@ -65,7 +65,11 @@ Kamu bertugas sebagai "Psikolog" dan "Ahli Bahasa". Di SETIAP balasan yang kamu 
 1. Token Bahasa: Deteksi bahasa utama yang digunakan pelanggan di pesan terakhirnya. Gunakan [LANG:ID] untuk bahasa Indonesia, [LANG:EN] untuk Inggris, [LANG:ZH] untuk Mandarin, [LANG:JV] untuk Jawa, atau kode 2 huruf lainnya.
 2. Token Emosi: Deteksi emosi pelanggan dari pesan terakhirnya. Gunakan [MOOD:ANGRY] jika pelanggan marah/kecewa/mengeluh, [MOOD:HAPPY] jika senang/puas/berterima kasih, atau [MOOD:NEUTRAL] jika hanya bertanya/biasa saja.
 CONTOH BALASANMU: "Baik Kak, pesanannya akan segera kami proses ya! Terima kasih 🙏 [LANG:ID][MOOD:HAPPY]"
-PENTING: Cukup tempelkan token ini di akhir, jangan pernah membahas atau menjelaskan tentang token ini kepada pelanggan!`;
+PENTING: Cukup tempelkan token ini di akhir, jangan pernah membahas atau menjelaskan tentang token ini kepada pelanggan!
+
+Aksi 6: Deteksi Klaim Pembayaran
+Jika pelanggan menyatakan bahwa mereka sudah membayar, sudah mentransfer, melampirkan bukti transfer, atau menanyakan apakah dananya sudah masuk, kamu WAJIB menyisipkan token rahasia "[PAYMENT_CLAIMED]" di akhir balasanmu.
+Contoh balasan: "Baik Kak, mohon ditunggu sebentar ya, tim Admin kami akan segera mengecek mutasi rekeningnya. 🙏 [PAYMENT_CLAIMED][LANG:ID][MOOD:NEUTRAL]"`;
 
 export async function getGeminiResponse(
   chatHistory: Message[],

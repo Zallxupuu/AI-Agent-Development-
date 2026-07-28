@@ -84,13 +84,18 @@ export async function POST(request: NextRequest): Promise<Response> {
 async function processIncomingMessage(
   waMessage: WhatsAppMessage
 ): Promise<void> {
-  if (waMessage.type !== "text" || !waMessage.text?.body) {
-    console.log(`[Webhook] Pesan non-teks diabaikan.`);
+  let messageContent = "";
+  if (waMessage.type === "text" && waMessage.text?.body) {
+    messageContent = waMessage.text.body;
+  } else if (waMessage.type === "image" && waMessage.image?.id) {
+    const caption = waMessage.image.caption ? ` Caption: ${waMessage.image.caption}` : "";
+    messageContent = `[Pelanggan mengirim gambar/foto bukti] [IMAGE:${waMessage.image.id}]${caption}`;
+  } else {
+    console.log(`[Webhook] Pesan tipe ${waMessage.type} diabaikan.`);
     return;
   }
 
   const phoneNumber = waMessage.from;
-  const messageContent = waMessage.text.body;
 
   let isBotActive = true; 
   let currentStatus = "new";
@@ -158,24 +163,43 @@ async function processIncomingMessage(
 
   let textToSend = aiResponse;
 
-  // Extract Mood and Lang
+  // Extract Mood, Lang, and Payment
   const moodMatch = textToSend.match(/\[MOOD:(.*?)\]/i);
   const langMatch = textToSend.match(/\[LANG:(.*?)\]/i);
+  
+  // Deteksi pembayaran ganda: lewat AI (PAYMENT_CLAIMED), lewat Gambar (semua gambar dianggap butuh admin), atau Regex kata kunci
+  const paymentMatch = 
+    textToSend.includes("[PAYMENT_CLAIMED]") || 
+    messageContent.includes("[IMAGE:") || 
+    /transfer|udah bayar|sudah bayar|lunas|tf|struk|bukti/i.test(messageContent);
   
   const mood = moodMatch ? moodMatch[1].toLowerCase() : null;
   const lang = langMatch ? langMatch[1].toLowerCase() : null;
   
   if (moodMatch) textToSend = textToSend.replace(moodMatch[0], "").trim();
   if (langMatch) textToSend = textToSend.replace(langMatch[0], "").trim();
+  if (paymentMatch) textToSend = textToSend.replace(/\[PAYMENT_CLAIMED\]/gi, "").trim();
 
-  if (mood || lang) {
+  if (mood || lang || paymentMatch) {
     const parts = currentStatus.split('|');
-    const baseStatus = parts[0] || 'new';
+    let baseStatus = parts[0] || 'new';
     const currentMood = parts[1] || 'neutral';
     const currentLang = parts[2] || 'id';
+    let currentPayment = parts[3] || 'unpaid';
+
+    if (paymentMatch) {
+      currentPayment = 'claimed';
+      baseStatus = 'pending'; // Force pending to get admin attention
+    }
     
-    currentStatus = `${baseStatus}|${mood || currentMood}|${lang || currentLang}`;
-    await supabase.from("sessions").update({ status: currentStatus }).eq("phone_number", phoneNumber);
+    currentStatus = `${baseStatus}|${mood || currentMood}|${lang || currentLang}|${currentPayment}`;
+    
+    const updateData: any = { status: currentStatus };
+    if (paymentMatch) {
+      updateData.is_bot_active = false; // Turn off bot so it doesn't auto-reply while waiting for confirmation
+    }
+    
+    await supabase.from("sessions").update(updateData).eq("phone_number", phoneNumber);
   }
   
   // Handle switch to manual reply
@@ -184,7 +208,7 @@ async function processIncomingMessage(
     textToSend = textToSend.replace(/\[MANUAL_REPLY\]/g, "").trim();
     
     const parts = currentStatus.split('|');
-    const newStatus = `pending|${parts[1] || 'neutral'}|${parts[2] || 'id'}`;
+    const newStatus = `pending|${parts[1] || 'neutral'}|${parts[2] || 'id'}|${parts[3] || 'unpaid'}`;
     
     // Nonaktifkan bot dan set status pending agar disorot admin
     await supabase

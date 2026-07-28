@@ -22,16 +22,19 @@ import {
   ArrowLeft,
   Package,
   Tag,
-  LayoutDashboard
+  LayoutDashboard,
+  Paperclip,
+  X
 } from "@/components/Icons";
 
 const parseStatus = (statusStr: string | undefined) => {
-  if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id' };
+  if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id', payment: 'unpaid' };
   const parts = statusStr.split('|');
   return {
     base: parts[0] || 'new',
     mood: parts[1] || 'neutral',
-    lang: parts[2] || 'id'
+    lang: parts[2] || 'id',
+    payment: parts[3] || 'unpaid'
   };
 };
 
@@ -64,6 +67,8 @@ export default function Dashboard() {
 
   // State for Input & Sending
   const [inputValue, setInputValue] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,8 +138,46 @@ export default function Dashboard() {
 
     fetchConfig();
 
+    // Request Notification permission
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+
+    // Global listener for new messages to trigger notifications
+    const globalMessagesChannel = supabaseClient
+      .channel('global_messages')
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const newMsg = payload.new as Message;
+          if (newMsg.role === 'client' && typeof window !== 'undefined') {
+            // Check if permission granted
+            if ('Notification' in window && Notification.permission === 'granted') {
+              let body = newMsg.content;
+              if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
+              
+              const notification = new Notification(`Pesan dari ${newMsg.phone_number}`, {
+                body: body,
+                icon: '/favicon.ico' // Default icon fallback
+              });
+              
+              // Optional audio ping
+              try {
+                // If we don't have a file, Audio constructor might fail or do nothing, 
+                // but the system notification sound usually plays automatically on Windows/macOS.
+              } catch (e) {}
+            }
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabaseClient.removeChannel(sessionsChannel);
+      supabaseClient.removeChannel(globalMessagesChannel);
     };
   }, []);
 
@@ -199,18 +242,27 @@ export default function Dashboard() {
   // 4. Handle sending manual reply
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || !selectedPhone || isSending) return;
+    if ((!inputValue.trim() && !selectedImage) || !selectedPhone || isSending) return;
 
     setIsSending(true);
     setError(null);
     const content = inputValue;
+    const currentImage = selectedImage;
+    
     setInputValue(""); // Optimistic clear
+    setSelectedImage(null);
 
     try {
+      const formData = new FormData();
+      formData.append("phone_number", selectedPhone);
+      formData.append("content", content);
+      if (currentImage) {
+        formData.append("image", currentImage);
+      }
+
       const res = await fetch("/api/manual-reply", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_number: selectedPhone, content }),
+        body: formData,
       });
 
       const result = await res.json();
@@ -222,6 +274,7 @@ export default function Dashboard() {
       console.error("Send message error:", err);
       setError(err.message || "Gagal mengirim pesan.");
       setInputValue(content); // Restore input on error
+      setSelectedImage(currentImage);
     } finally {
       setIsSending(false);
     }
@@ -277,7 +330,7 @@ export default function Dashboard() {
     if (!selectedPhone) return;
     const currentSession = sessions.find(s => s.phone_number === selectedPhone);
     const parsed = parseStatus(currentSession?.status);
-    const updatedStatus = `${newBaseStatus}|${parsed.mood}|${parsed.lang}`;
+    const updatedStatus = `${newBaseStatus}|${parsed.mood}|${parsed.lang}|${parsed.payment}`;
 
     try {
       const { error } = await supabaseClient
@@ -288,6 +341,39 @@ export default function Dashboard() {
     } catch (err: any) {
       console.error("Failed to update status:", err);
       setError("Gagal merubah status.");
+    }
+  };
+
+  const handlePaymentConfirmation = async (paymentStatus: 'paid' | 'unpaid') => {
+    if (!selectedPhone) return;
+    setIsSending(true);
+    try {
+      const currentSession = sessions.find(s => s.phone_number === selectedPhone);
+      const parsed = parseStatus(currentSession?.status);
+      const updatedStatus = `${parsed.base}|${parsed.mood}|${parsed.lang}|${paymentStatus}`;
+
+      // Update session status
+      await supabaseClient
+        .from("sessions")
+        .update({ status: updatedStatus })
+        .eq("phone_number", selectedPhone);
+
+      // Send auto message
+      const content = paymentStatus === 'paid' 
+        ? "Terima kasih Kak, pembayaran sudah kami terima. Pesanan segera diproses! 🎉"
+        : "Maaf Kak, setelah kami cek, dananya belum masuk. Boleh minta tolong kirim foto bukti transfernya? 🙏";
+
+      const res = await fetch("/api/manual-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone_number: selectedPhone, content }),
+      });
+      if (!res.ok) throw new Error("Gagal kirim pesan konfirmasi.");
+    } catch (err: any) {
+      console.error(err);
+      setError("Gagal mengonfirmasi pembayaran.");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -564,6 +650,37 @@ export default function Dashboard() {
               )}
             </header>
 
+            {/* Payment Banner */}
+            {activeSession && parseStatus(activeSession.status).payment === 'claimed' && (
+              <div className="mx-4 md:mx-6 mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center flex-shrink-0">
+                    💰
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-primary text-sm">Pelanggan Mengklaim Sudah Membayar</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Mohon cek mutasi rekening Anda sekarang. Apakah dananya sudah masuk?</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <button 
+                    onClick={() => handlePaymentConfirmation('unpaid')}
+                    disabled={isSending}
+                    className="flex-1 md:flex-none px-4 py-2 rounded-lg border border-border bg-card text-xs font-semibold hover:bg-muted text-muted-foreground transition-colors disabled:opacity-50"
+                  >
+                    ❌ Belum Lunas
+                  </button>
+                  <button 
+                    onClick={() => handlePaymentConfirmation('paid')}
+                    disabled={isSending}
+                    className="flex-1 md:flex-none px-4 py-2 rounded-lg bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition-colors shadow-sm disabled:opacity-50"
+                  >
+                    ✅ Konfirmasi Lunas
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-5 scrollbar-thin">
               {messagesLoading ? (
@@ -622,7 +739,26 @@ export default function Dashboard() {
                                   )}
                                 </div>
                               )}
-                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                              {/* Render Content */}
+                              {msg.content.match(/\[IMAGE:(.*?)\]/) ? (
+                                <>
+                                  {msg.content.replace(/\[IMAGE:.*?\]/g, "").trim() && (
+                                    <p className="whitespace-pre-wrap break-words mb-2">
+                                      {msg.content.replace(/\[IMAGE:.*?\]/g, "").trim()}
+                                    </p>
+                                  )}
+                                  <div className="rounded-lg overflow-hidden border border-border/20 max-w-[240px] mt-2 relative bg-black/5">
+                                    <img 
+                                      src={`/api/media/${msg.content.match(/\[IMAGE:(.*?)\]/)?.[1]}`} 
+                                      alt="Bukti Transfer" 
+                                      className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
+                                      loading="lazy"
+                                    />
+                                  </div>
+                                </>
+                              ) : (
+                                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                              )}
                               
                               {/* Timestamp */}
                               <div className={`text-[10px] mt-2 flex items-center ${isClient ? "justify-start text-muted-foreground" : "justify-end text-primary-foreground/70"}`}>
@@ -660,25 +796,64 @@ export default function Dashboard() {
 
               <form 
                 onSubmit={handleSendMessage}
-                className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto"
+                className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto flex-col"
               >
-                <div className="flex-1 bg-muted rounded-2xl border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 overflow-hidden shadow-inner flex items-center px-3 md:px-4 py-2 min-h-[52px]">
-                  <textarea
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage(e);
-                      }
-                    }}
-                    placeholder={activeSession?.is_bot_active ? "Ketik pesan (Auto-reply AI masih aktif)..." : "Ketik balasan Anda..."}
-                    className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-foreground placeholder-muted-foreground py-2 max-h-32 text-[14px] md:text-[15px]"
-                    rows={1}
-                    style={{ height: 'auto', minHeight: '1.5rem' }}
-                    disabled={isSending}
-                  />
-                </div>
+                {selectedImage && (
+                  <div className="w-full flex justify-start">
+                    <div className="relative group rounded-xl overflow-hidden border border-border/50 max-w-[200px] shadow-sm">
+                      <img 
+                        src={URL.createObjectURL(selectedImage)} 
+                        alt="Preview" 
+                        className="w-full h-auto object-cover max-h-[150px]"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setSelectedImage(null)}
+                        className="absolute top-1 right-1 bg-black/60 text-white p-1 rounded-full hover:bg-red-500 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-end gap-2 md:gap-3 w-full">
+                  <div className="flex-1 bg-muted rounded-2xl border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 overflow-hidden shadow-inner flex items-center px-3 md:px-4 py-2 min-h-[52px]">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-muted-foreground hover:text-primary transition-colors mr-2"
+                      title="Lampirkan Gambar"
+                    >
+                      <Paperclip size={20} />
+                    </button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setSelectedImage(file);
+                        e.target.value = "";
+                      }}
+                      className="hidden"
+                    />
+                    <textarea
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(e);
+                        }
+                      }}
+                      placeholder={activeSession?.is_bot_active ? "Ketik pesan (Auto-reply AI masih aktif)..." : "Ketik balasan Anda..."}
+                      className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-foreground placeholder-muted-foreground py-2 max-h-32 text-[14px] md:text-[15px]"
+                      rows={1}
+                      style={{ height: 'auto', minHeight: '1.5rem' }}
+                      disabled={isSending}
+                    />
+                  </div>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.95 }}
@@ -692,6 +867,7 @@ export default function Dashboard() {
                     <Send size={18} className="ml-0.5" />
                   )}
                 </motion.button>
+                </div>
               </form>
               <div className="text-center mt-3 text-[11px] text-muted-foreground font-medium tracking-wide">
                 Tekan <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-sans">Enter</kbd> untuk mengirim, <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-sans">Shift+Enter</kbd> baris baru.

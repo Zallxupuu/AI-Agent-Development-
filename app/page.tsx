@@ -408,10 +408,13 @@ export default function Dashboard() {
         ? "Terima kasih Kak, pembayaran sudah kami terima. Pesanan segera diproses! 🎉"
         : "Maaf Kak, setelah kami cek, dananya belum masuk. Boleh minta tolong kirim foto bukti transfernya? 🙏";
 
+      const formData = new FormData();
+      formData.append("phone_number", selectedPhone);
+      formData.append("content", content);
+
       const res = await fetch("/api/manual-reply", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_number: selectedPhone, content }),
+        body: formData,
       });
       if (!res.ok) throw new Error("Gagal kirim pesan konfirmasi.");
     } catch (err: any) {

@@ -16,7 +16,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'profil' | 'ai' | 'interaktif' | 'pembayaran'>('profil');
+  const [activeTab, setActiveTab] = useState<'profil' | 'ai' | 'training' | 'interaktif' | 'pembayaran'>('profil');
+
+  // Training Data State
+  const [trainingData, setTrainingData] = useState("");
 
   // Promo State
   const [promoActive, setPromoActive] = useState(false);
@@ -76,6 +79,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               setPromoActive(promo.active || false);
               setPromoEndDate(promo.endDate || "");
               setPromoText(promo.text || "");
+              setTrainingData(promo.trainingData || "");
               
               if (promo.interactive) {
                 setBtnActive(promo.interactive.enabled ?? true);
@@ -118,6 +122,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         active: promoActive,
         endDate: promoEndDate,
         text: promoText,
+        trainingData,
         interactive: {
           enabled: btnActive,
           btn1, btn2, btn3,
@@ -216,7 +221,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const tabs = [
     { id: 'profil', label: 'Profil Bisnis', icon: <User size={18} /> },
     { id: 'ai', label: 'Preferensi AI', icon: <Bot size={18} /> },
-    { id: 'interaktif', label: 'Tombol & Promo', icon: <MessageSquare size={18} /> },
+    { id: 'training', label: 'Training & FAQ', icon: <MessageSquare size={18} /> },
+    { id: 'interaktif', label: 'Tombol & Promo', icon: <Megaphone size={18} /> },
     { id: 'pembayaran', label: 'Link & Payment', icon: <LinkIcon size={18} /> },
   ];
 
@@ -332,7 +338,26 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </motion.div>
                   )}
 
-                  {/* TAB 3: INTERAKTIF */}
+                  {/* TAB 3: TRAINING AI */}
+                  {activeTab === 'training' && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 max-w-2xl">
+                      <h3 className="text-lg font-bold text-foreground mb-6 border-b border-border pb-4">Knowledge Base & FAQ</h3>
+                      
+                      <div>
+                        <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Data Latihan AI (FAQ / Format Pesanan)</label>
+                        <p className="text-[13px] text-muted-foreground mb-2 leading-relaxed">Masukkan pertanyaan yang sering ditanyakan (FAQ) atau format pesanan agar AI bisa memberikan respon yang tepat sesuai standar tokomu.</p>
+                        <textarea
+                          value={trainingData}
+                          onChange={(e) => setTrainingData(e.target.value)}
+                          rows={12}
+                          placeholder="Contoh:&#10;Q: Apakah barang ready?&#10;A: Semua barang di etalase kami ready ya Kak!&#10;&#10;Format Pesanan:&#10;Nama:&#10;Alamat Lengkap:&#10;No HP:&#10;Pesanan:"
+                          className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none text-[15px] shadow-sm font-mono text-sm"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* TAB 4: INTERAKTIF */}
                   {activeTab === 'interaktif' && (
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8 max-w-2xl">
                       <h3 className="text-lg font-bold text-foreground mb-4 border-b border-border pb-4">Pengaturan Tombol & Promo</h3>
@@ -426,7 +451,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </motion.div>
                   )}
 
-                  {/* TAB 4: LINK & PAYMENT */}
+                  {/* TAB 5: LINK & PAYMENT */}
                   {activeTab === 'pembayaran' && (
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 max-w-2xl">
                       <h3 className="text-lg font-bold text-foreground mb-6 border-b border-border pb-4">Pengaturan Media & Pembayaran</h3>

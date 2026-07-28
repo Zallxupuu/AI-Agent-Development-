@@ -16,6 +16,16 @@ export default function SettingsView() {
   const [promoEndDate, setPromoEndDate] = useState("");
   const [promoText, setPromoText] = useState("");
 
+  // Interactive Buttons State (Stored in config.products as JSON)
+  const [btnActive, setBtnActive] = useState(true);
+  const [btn1, setBtn1] = useState("Lihat Produk");
+  const [btn2, setBtn2] = useState("Cara Beli");
+  const [btn3, setBtn3] = useState("Hubungi Admin");
+  
+  // Link Button State
+  const [linkBtnActive, setLinkBtnActive] = useState(true);
+  const [linkBtnLabel, setLinkBtnLabel] = useState("Kunjungi Website");
+  const [linkBtnUrl, setLinkBtnUrl] = useState("");
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -50,6 +60,17 @@ export default function SettingsView() {
             setPromoActive(promo.isActive || false);
             setPromoEndDate(promo.endDate || "");
             setPromoText(promo.promoText || "");
+            
+            if (promo.interactive) {
+              setBtnActive(promo.interactive.enabled ?? true);
+              setBtn1(promo.interactive.btn1 || "Lihat Produk");
+              setBtn2(promo.interactive.btn2 || "Cara Beli");
+              setBtn3(promo.interactive.btn3 || "Hubungi Admin");
+              
+              setLinkBtnActive(promo.interactive.linkEnabled ?? true);
+              setLinkBtnLabel(promo.interactive.linkLabel || "Kunjungi Website");
+              setLinkBtnUrl(promo.interactive.linkUrl || "");
+            }
           } catch (e) {
             // If old text, just ignore
           }
@@ -76,7 +97,16 @@ export default function SettingsView() {
       const promoObj = {
         isActive: promoActive,
         endDate: promoEndDate,
-        promoText: promoText
+        promoText: promoText,
+        interactive: {
+          enabled: btnActive,
+          btn1,
+          btn2,
+          btn3,
+          linkEnabled: linkBtnActive,
+          linkLabel: linkBtnLabel,
+          linkUrl: linkBtnUrl
+        }
       };
       const { error } = await supabaseClient
         .from("ai_config")
@@ -326,6 +356,69 @@ export default function SettingsView() {
                 rows={4}
                 className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none text-[15px] shadow-sm hover:border-primary/50"
               />
+            </div>
+
+            <div className="pt-6 border-t border-border">
+              <h3 className="text-sm font-bold text-foreground mb-5 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md bg-blue-500/20 text-blue-600 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M12 2v20"/></svg>
+                </span>
+                Pengaturan Tombol & Menu (Interactive)
+              </h3>
+              
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-xl">
+                  <div>
+                    <label className="block text-[14px] font-semibold text-foreground mb-1">Tombol Standar (Reply Buttons)</label>
+                    <p className="text-[12px] text-muted-foreground">Aktifkan untuk memunculkan 3 tombol saat klien kebingungan atau meminta menu.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={btnActive} onChange={(e) => setBtnActive(e.target.checked)} />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {btnActive && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[12px] font-semibold text-foreground mb-1">Teks Tombol 1</label>
+                      <input type="text" value={btn1} onChange={(e) => setBtn1(e.target.value)} maxLength={20} className="w-full px-4 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[14px]" />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-foreground mb-1">Teks Tombol 2</label>
+                      <input type="text" value={btn2} onChange={(e) => setBtn2(e.target.value)} maxLength={20} className="w-full px-4 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[14px]" />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-foreground mb-1">Teks Tombol 3</label>
+                      <input type="text" value={btn3} onChange={(e) => setBtn3(e.target.value)} maxLength={20} className="w-full px-4 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[14px]" />
+                    </div>
+                  </motion.div>
+                )}
+
+                <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-xl">
+                  <div>
+                    <label className="block text-[14px] font-semibold text-foreground mb-1">Tombol Link (URL Button)</label>
+                    <p className="text-[12px] text-muted-foreground">Aktifkan untuk memunculkan tombol Link Eksternal jika pelanggan meminta URL.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={linkBtnActive} onChange={(e) => setLinkBtnActive(e.target.checked)} />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {linkBtnActive && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[12px] font-semibold text-foreground mb-1">Label Tombol</label>
+                      <input type="text" value={linkBtnLabel} onChange={(e) => setLinkBtnLabel(e.target.value)} maxLength={20} placeholder="Kunjungi Website" className="w-full px-4 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[14px]" />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-foreground mb-1">URL Tujuan</label>
+                      <input type="url" value={linkBtnUrl} onChange={(e) => setLinkBtnUrl(e.target.value)} placeholder="https://..." className="w-full px-4 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[14px]" />
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
 
             <div className="pt-6 border-t border-border">

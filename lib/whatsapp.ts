@@ -138,6 +138,48 @@ export async function sendWhatsAppInteractiveButtons(
   return response;
 }
 
+export async function sendWhatsAppInteractiveUrl(
+  to: string,
+  text: string,
+  display_text: string,
+  url: string
+): Promise<Response> {
+  const response = await fetch(WA_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "cta_url",
+        body: {
+          text: text,
+        },
+        action: {
+          name: "cta_url",
+          parameters: {
+            display_text: display_text,
+            url: url,
+          },
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[WhatsApp API Error] Interactive URL Status: ${response.status}, Body: ${errorBody}`);
+    throw new Error(`WhatsApp API error: ${response.status}`);
+  }
+
+  return response;
+}
+
 export async function sendWhatsAppInteractiveList(
   to: string,
   text: string,

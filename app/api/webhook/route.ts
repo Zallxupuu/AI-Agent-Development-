@@ -9,7 +9,7 @@
 
 import { type NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { sendWhatsAppMessage, sendWhatsAppImage, sendWhatsAppInteractiveButtons, sendWhatsAppInteractiveList } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, sendWhatsAppImage, sendWhatsAppInteractiveButtons, sendWhatsAppInteractiveList, sendWhatsAppInteractiveUrl } from "@/lib/whatsapp";
 import { getGeminiResponse } from "@/lib/gemini";
 import type {
   WhatsAppWebhookPayload,
@@ -238,18 +238,66 @@ async function processIncomingMessage(
     textToSend = textToSend.replace(/\[MENU\]/g, "").trim();
   }
 
+  const needsLink = textToSend.includes("[LINK]");
+  if (needsLink) {
+    textToSend = textToSend.replace(/\[LINK\]/g, "").trim();
+  }
+
   const needsKatalog = textToSend.includes("[KATALOG]");
   if (needsKatalog) {
     textToSend = textToSend.replace(/\[KATALOG\]/g, "").trim();
   }
 
   try {
+    let aiConfig = null;
+    if (needsMenu || needsLink) {
+      const { data } = await supabase.from("ai_config").select("products").eq("id", 1).single();
+      aiConfig = data;
+    }
+
     if (needsMenu) {
-      await sendWhatsAppInteractiveButtons(phoneNumber, textToSend || "Silakan pilih opsi berikut:", [
-        { id: "btn_katalog", title: "Lihat Produk" },
-        { id: "btn_cara_beli", title: "Cara Beli" },
-        { id: "btn_admin", title: "Hubungi Admin" }
-      ]);
+      let btn1 = "Lihat Produk", btn2 = "Cara Beli", btn3 = "Hubungi Admin";
+      let btnActive = true;
+      if (aiConfig?.products) {
+        try {
+          const promo = JSON.parse(aiConfig.products);
+          if (promo.interactive) {
+             btnActive = promo.interactive.enabled ?? true;
+             btn1 = promo.interactive.btn1 || btn1;
+             btn2 = promo.interactive.btn2 || btn2;
+             btn3 = promo.interactive.btn3 || btn3;
+          }
+        } catch (e) {}
+      }
+      
+      if (btnActive) {
+        await sendWhatsAppInteractiveButtons(phoneNumber, textToSend || "Silakan pilih opsi berikut:", [
+          { id: "btn_katalog", title: btn1.substring(0, 20) },
+          { id: "btn_cara_beli", title: btn2.substring(0, 20) },
+          { id: "btn_admin", title: btn3.substring(0, 20) }
+        ]);
+      } else {
+        await sendWhatsAppMessage(phoneNumber, textToSend);
+      }
+    } else if (needsLink) {
+      let linkLabel = "Kunjungi Website", linkUrl = "https://example.com";
+      let linkActive = true;
+      if (aiConfig?.products) {
+        try {
+          const promo = JSON.parse(aiConfig.products);
+          if (promo.interactive) {
+             linkActive = promo.interactive.linkEnabled ?? true;
+             linkLabel = promo.interactive.linkLabel || linkLabel;
+             linkUrl = promo.interactive.linkUrl || linkUrl;
+          }
+        } catch (e) {}
+      }
+      
+      if (linkActive && linkUrl) {
+        await sendWhatsAppInteractiveUrl(phoneNumber, textToSend || "Berikut link yang Anda minta:", linkLabel.substring(0, 20), linkUrl);
+      } else {
+        await sendWhatsAppMessage(phoneNumber, textToSend);
+      }
     } else if (needsKatalog) {
       // Ambil 10 produk teratas dari database
       const { data: products } = await supabase.from("products").select("id, name, price").limit(10);

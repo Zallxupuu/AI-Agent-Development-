@@ -11,6 +11,7 @@ import { type NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { sendWhatsAppMessage, sendWhatsAppImage, sendWhatsAppInteractiveButtons, sendWhatsAppInteractiveList, sendWhatsAppInteractiveUrl } from "@/lib/whatsapp";
 import { getGeminiResponse } from "@/lib/gemini";
+import { checkMLNickname } from "@/lib/nickname";
 import type {
   WhatsAppWebhookPayload,
   WhatsAppMessage,
@@ -118,6 +119,22 @@ async function processIncomingMessage(
   } else {
     console.log(`[Webhook] Pesan tipe ${waMessage.type} diabaikan.`);
     return;
+  }
+
+  // INTERCEPT: Auto-Cek Nickname MLBB
+  // Regex mencari format: angka 5-12 digit, spasi/kurung/strip, angka 4-5 digit
+  // Contoh: 1114917746 (13486) atau 1114917746 13486
+  const mlbbRegex = /\b(\d{5,12})\s*[\(\-\s]?\s*(\d{4,5})[\)\-\s]?\b/;
+  const match = messageContent.match(mlbbRegex);
+  if (match) {
+    const userId = match[1];
+    const zoneId = match[2];
+    const nickname = await checkMLNickname(userId, zoneId);
+    if (nickname) {
+      messageContent += `\n\n[SYSTEM INFO: Sistem telah mengecek ID Game secara otomatis ke server. Nickname in-game untuk ID ${userId} (${zoneId}) adalah "${nickname}". Informasikan nama ini ke pengguna untuk mengonfirmasi pesanan mereka.]`;
+    } else {
+      messageContent += `\n\n[SYSTEM INFO: Sistem mencoba mengecek ID ${userId} (${zoneId}) tetapi tidak ditemukan (invalid). Beritahu pengguna bahwa ID salah.]`;
+    }
   }
 
   const phoneNumber = waMessage.from;

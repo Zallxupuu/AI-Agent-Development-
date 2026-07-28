@@ -52,24 +52,38 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 }
 
-export async function POST(request: NextRequest): Promise<Response> {
+// Simpan ID pesan yang sudah diproses di memori untuk deduplikasi cepat
+const processedMessageIds = new Set<string>();
+// Bersihkan cache setiap jam agar memori tidak bocor
+setInterval(() => processedMessageIds.clear(), 60 * 60 * 1000);
+
+export async function POST(req: NextRequest) {
   try {
-    const body: WhatsAppWebhookPayload = await request.json();
+    const body: WhatsAppWebhookPayload = await req.json();
 
-    if (body.object !== "whatsapp_business_account") {
-      return new Response("Not a WhatsApp webhook", { status: 404 });
-    }
+    if (body.object === "whatsapp_business_account") {
+      for (const entry of body.entry) {
+        const changes = entry.changes;
+        for (const change of changes) {
+          const value = change.value;
+          if (value.messages && value.messages.length > 0) {
+            for (const waMessage of value.messages) {
+              // Deduplikasi: Cegah pesan diproses dua kali (menghindari double chat)
+              if (waMessage.id && processedMessageIds.has(waMessage.id)) {
+                console.log(`[Webhook] Pesan ${waMessage.id} sudah diproses, mengabaikan duplikat.`);
+                continue;
+              }
+              if (waMessage.id) {
+                processedMessageIds.add(waMessage.id);
+              }
 
-    for (const entry of body.entry) {
-      for (const change of entry.changes) {
-        const value = change.value;
-
-        if (!value.messages || value.messages.length === 0) {
-          continue;
-        }
-
-        for (const waMessage of value.messages) {
-          await processIncomingMessage(waMessage);
+              // Jalankan secara asynchronous (tanpa await) agar webhook membalas 200 OK 
+              // ke WhatsApp dalam hitungan milidetik. Mencegah delay & pengiriman ulang dari Meta.
+              processIncomingMessage(waMessage).catch((err) => 
+                console.error("[Webhook] Error background processing:", err)
+              );
+            }
+          }
         }
       }
     }

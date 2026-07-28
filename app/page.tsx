@@ -763,7 +763,7 @@ export default function Dashboard() {
                                   ? "bg-card text-card-foreground border border-border rounded-bl-sm shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
                                   : isAi
                                   ? "bg-primary text-primary-foreground rounded-br-sm shadow-[0_4px_14px_-6px_rgba(var(--primary),0.4)]"
-                                  : "bg-foreground text-background rounded-br-sm shadow-[0_4px_14px_-6px_rgba(0,0,0,0.4)]"
+                                  : "bg-emerald-600 text-white rounded-br-sm shadow-[0_4px_14px_-6px_rgba(5,150,105,0.4)]"
                               }`}
                             >
                               {!isClient && (
@@ -797,7 +797,13 @@ export default function Dashboard() {
                               )}
                               
                               {/* Timestamp */}
-                              <div className={`text-[10px] mt-2 flex items-center ${isClient ? "justify-start text-muted-foreground" : "justify-end text-primary-foreground/70"}`}>
+                              <div className={`text-[10px] mt-2 flex items-center ${
+                                isClient 
+                                  ? "justify-start text-muted-foreground" 
+                                  : isAi 
+                                    ? "justify-end text-primary-foreground/70"
+                                    : "justify-end text-white/70"
+                              }`}>
                                 {formatTime(msg.created_at)}
                                 {(!isClient) && <CheckCircle2 size={10} className="ml-1 opacity-80" />}
                               </div>

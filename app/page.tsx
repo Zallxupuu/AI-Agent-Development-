@@ -81,6 +81,7 @@ export default function Dashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modalImage, setModalImage] = useState<string | null>(null);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -828,7 +829,10 @@ export default function Dashboard() {
                                       {msg.content.replace(/\[IMAGE:.*?\]/g, "").trim()}
                                     </p>
                                   )}
-                                  <div className="rounded-lg overflow-hidden border border-border/20 max-w-[240px] mt-2 relative bg-black/5">
+                                  <div 
+                                    className="rounded-lg overflow-hidden border border-border/20 max-w-[240px] mt-2 relative bg-black/5 cursor-pointer"
+                                    onClick={() => setModalImage(`/api/media/${msg.content.match(/\[IMAGE:(.*?)\]/)?.[1]}`)}
+                                  >
                                     <img 
                                       src={`/api/media/${msg.content.match(/\[IMAGE:(.*?)\]/)?.[1]}`} 
                                       alt="Bukti Transfer" 
@@ -962,6 +966,36 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+        
+        {/* Image Modal Overlay */}
+        <AnimatePresence>
+          {modalImage && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-8"
+              onClick={() => setModalImage(null)}
+            >
+              <button 
+                onClick={() => setModalImage(null)}
+                className="absolute top-4 right-4 md:top-8 md:right-8 bg-black/50 text-white p-2 rounded-full hover:bg-white/20 transition-colors"
+              >
+                <X size={24} />
+              </button>
+              <motion.img 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                src={modalImage}
+                alt="Modal Image"
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

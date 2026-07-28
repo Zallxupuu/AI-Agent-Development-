@@ -29,13 +29,14 @@ import {
 } from "@/components/Icons";
 
 const parseStatus = (statusStr: string | undefined) => {
-  if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id', payment: 'unpaid' };
+  if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id', payment: 'unpaid', name: '' };
   const parts = statusStr.split('|');
   return {
     base: parts[0] || 'new',
     mood: parts[1] || 'neutral',
     lang: parts[2] || 'id',
-    payment: parts[3] || 'unpaid'
+    payment: parts[3] || 'unpaid',
+    name: parts[4] || ''
   };
 };
 
@@ -57,6 +58,12 @@ const getLangFlag = (lang: string) => {
 export default function Dashboard() {
   // State for Sessions
   const [sessions, setSessions] = useState<Session[]>([]);
+  const sessionsRef = useRef<Session[]>([]);
+  
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [config, setConfig] = useState<AiConfig | null>(null);
@@ -159,9 +166,38 @@ export default function Dashboard() {
             if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
 
             // 1. In-app Toast Notification (using Sonner)
-            toast(`Pesan dari ${newMsg.phone_number}`, {
-              description: body,
-              icon: '💬',
+            const senderSession = sessionsRef.current.find(s => s.phone_number === newMsg.phone_number);
+            let senderName = newMsg.phone_number;
+            if (senderSession?.status) {
+              const parsed = parseStatus(senderSession.status);
+              if (parsed.name) senderName = parsed.name;
+            }
+            
+            
+            toast.custom((t) => (
+              <div 
+                onClick={() => {
+                  setSelectedPhone(newMsg.phone_number);
+                  toast.dismiss(t);
+                  if (window.innerWidth < 768) {
+                    setIsSidebarCollapsed(true);
+                  }
+                }}
+                className="bg-card text-card-foreground border-l-4 border-l-primary border-y border-r border-y-border border-r-border shadow-xl p-4 rounded-xl flex flex-col gap-1.5 cursor-pointer hover:bg-muted/40 transition-all w-full min-w-[320px]"
+              >
+                <div className="font-bold text-base flex items-center gap-2 text-foreground">
+                  <div className="bg-primary/20 p-1.5 rounded-full text-primary">
+                    <MessageSquare size={18} />
+                  </div>
+                  {senderName}
+                </div>
+                <div className="text-[14px] text-muted-foreground line-clamp-2 pl-9">
+                  {body}
+                </div>
+              </div>
+            ), {
+              duration: 5000,
+              position: 'top-center'
             });
 
             // 2. OS-level Browser Notification
@@ -439,9 +475,8 @@ export default function Dashboard() {
             <div className="divide-y divide-border">
               <AnimatePresence>
                 {sessions.map((session, index) => {
-                  // Stable client name based on phone string sorted alphabetically
-                  const stableIndex = [...sessions].sort((a,b) => a.phone_number.localeCompare(b.phone_number)).findIndex(s => s.phone_number === session.phone_number);
-                  const clientName = `Client ${stableIndex + 1}`;
+                  const parsedStatus = parseStatus(session.status);
+                  const clientName = parsedStatus.name || `+${session.phone_number}`;
                   
                   return (
                     <motion.button
@@ -464,7 +499,7 @@ export default function Dashboard() {
                     {isSidebarCollapsed ? (
                       <div className="flex flex-col items-center justify-center w-full gap-2">
                          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
-                            C{stableIndex + 1}
+                            {clientName.substring(0, 2).toUpperCase()}
                          </div>
                          <div className={`w-2 h-2 rounded-full ${session.is_bot_active ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                       </div>

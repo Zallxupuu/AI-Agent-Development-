@@ -68,8 +68,10 @@ export async function POST(request: NextRequest): Promise<Response> {
           continue;
         }
 
+        const contactName = value.contacts?.[0]?.profile?.name || "";
+
         for (const waMessage of value.messages) {
-          await processIncomingMessage(waMessage);
+          await processIncomingMessage(waMessage, contactName);
         }
       }
     }
@@ -82,7 +84,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 }
 
 async function processIncomingMessage(
-  waMessage: WhatsAppMessage
+  waMessage: WhatsAppMessage,
+  contactName: string = ""
 ): Promise<void> {
   let messageContent = "";
   if (waMessage.type === "text" && waMessage.text?.body) {
@@ -107,12 +110,14 @@ async function processIncomingMessage(
     .single();
 
   if (fetchSessionError && fetchSessionError.code === "PGRST116") {
+    currentStatus = contactName ? `new|neutral|id|unpaid|${contactName}` : "new";
     const { error: insertSessionError } = await supabase
       .from("sessions")
       .insert({
         phone_number: phoneNumber,
         is_bot_active: true,
         last_active: new Date().toISOString(),
+        status: currentStatus,
       });
 
     if (insertSessionError) {
@@ -125,9 +130,16 @@ async function processIncomingMessage(
   } else if (existingSession) {
     isBotActive = existingSession.is_bot_active;
     currentStatus = existingSession.status || "new";
+    
+    // Append name if not already there
+    const parts = currentStatus.split('|');
+    if (parts.length < 5 && contactName) {
+      currentStatus = `${currentStatus}|${contactName}`;
+    }
+
     await supabase
       .from("sessions")
-      .update({ last_active: new Date().toISOString() })
+      .update({ last_active: new Date().toISOString(), status: currentStatus })
       .eq("phone_number", phoneNumber);
   }
 

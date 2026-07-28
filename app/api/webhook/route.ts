@@ -122,9 +122,9 @@ async function processIncomingMessage(
   }
 
   // INTERCEPT: Auto-Cek Nickname MLBB
-  // Regex mencari format: angka 5-12 digit, spasi/kurung/strip, angka 4-5 digit
-  // Contoh: 1114917746 (13486) atau 1114917746 13486
-  const mlbbRegex = /\b(\d{5,12})\s*[\(\-\s]?\s*(\d{4,5})[\)\-\s]?\b/;
+  // Regex mencari format: angka 5-12 digit, wajib diikuti spasi (opsional) dan kurung buka, angka 4-5 digit, dan kurung tutup
+  // Contoh: 1114917746 (13486) atau 1114917746(13486)
+  const mlbbRegex = /\b(\d{5,12})\s*\(\s*(\d{4,5})\s*\)/;
   const match = messageContent.match(mlbbRegex);
   if (match) {
     const userId = match[1];

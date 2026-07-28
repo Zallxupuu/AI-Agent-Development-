@@ -7,6 +7,7 @@ import SettingsView from "@/components/SettingsView";
 import ProductsView from "@/components/ProductsView";
 import DashboardOverview from "@/components/DashboardOverview";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { toast } from "sonner";
 import type { Session, Message, AiConfig } from "@/lib/types";
 import { 
   Bot, 
@@ -154,11 +155,17 @@ export default function Dashboard() {
         (payload) => {
           const newMsg = payload.new as Message;
           if (newMsg.role === 'client' && typeof window !== 'undefined') {
-            // Check if permission granted
+            let body = newMsg.content;
+            if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
+
+            // 1. In-app Toast Notification (using Sonner)
+            toast(`Pesan dari ${newMsg.phone_number}`, {
+              description: body,
+              icon: '💬',
+            });
+
+            // 2. OS-level Browser Notification
             if ('Notification' in window && Notification.permission === 'granted') {
-              let body = newMsg.content;
-              if (body.includes('[IMAGE:')) body = '📷 Mengirim Gambar';
-              
               const notification = new Notification(`Pesan dari ${newMsg.phone_number}`, {
                 body: body,
                 icon: '/favicon.ico' // Default icon fallback
@@ -166,8 +173,7 @@ export default function Dashboard() {
               
               // Optional audio ping
               try {
-                // If we don't have a file, Audio constructor might fail or do nothing, 
-                // but the system notification sound usually plays automatically on Windows/macOS.
+                // ...
               } catch (e) {}
             }
           }

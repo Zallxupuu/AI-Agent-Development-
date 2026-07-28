@@ -69,10 +69,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
 
         for (const waMessage of value.messages) {
-          // Process in background so we return 200 OK to WhatsApp instantly
-          processIncomingMessage(waMessage).catch((err) => 
-            console.error("[Webhook] Background processing error:", err)
-          );
+          await processIncomingMessage(waMessage);
         }
       }
     }

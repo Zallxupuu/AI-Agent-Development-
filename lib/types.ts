@@ -81,7 +81,19 @@ export interface WhatsAppMessage {
     id: string;
     caption?: string;
   };
-  type: string; // "text", "image", "audio", dll.
+  interactive?: {
+    type: string;
+    button_reply?: {
+      id: string;
+      title: string;
+    };
+    list_reply?: {
+      id: string;
+      title: string;
+      description?: string;
+    };
+  };
+  type: string; // "text", "image", "audio", "interactive", dll.
 }
 
 // ==========================================

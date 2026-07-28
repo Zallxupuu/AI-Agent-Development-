@@ -19,12 +19,15 @@ export function ThemeToggle({ isCollapsed = false }: { isCollapsed?: boolean }) 
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className={`flex items-center justify-center rounded-xl bg-card hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50 transition-all shadow-sm ${
-        isCollapsed ? 'p-2 w-10 h-10' : 'p-2.5 w-11 h-11'
-      }`}
+      className={`w-full flex items-center ${
+        isCollapsed ? 'justify-center p-2' : 'gap-3 py-2.5 px-4'
+      } rounded-xl font-medium transition-all duration-200 bg-transparent border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground`}
       title={theme === "dark" ? "Ganti ke Mode Terang" : "Ganti ke Mode Gelap"}
     >
-      {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-muted text-muted-foreground`}>
+        {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+      </div>
+      {!isCollapsed && (theme === "dark" ? "Mode Terang" : "Mode Gelap")}
     </button>
   );
 }

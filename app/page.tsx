@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabaseClient } from "@/lib/supabase-client";
-import SettingsView from "@/components/SettingsView";
+import SettingsModal from "@/components/SettingsModal";
 import ProductsView from "@/components/ProductsView";
 import DashboardOverview from "@/components/DashboardOverview";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -41,21 +41,6 @@ const parseStatus = (statusStr: string | undefined) => {
   };
 };
 
-const getMoodEmoji = (mood: string) => {
-  if (mood === 'angry') return '😡';
-  if (mood === 'happy') return '😊';
-  if (mood === 'neutral') return '😐';
-  return '';
-};
-
-const getLangFlag = (lang: string) => {
-  if (lang === 'en') return '🇬🇧';
-  if (lang === 'zh') return '🇨🇳';
-  if (lang === 'jv' || lang === 'su') return '🏝️';
-  if (lang === 'id') return '🇮🇩';
-  return '🇮🇩';
-};
-
 export default function Dashboard() {
   // State for Sessions
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -70,6 +55,7 @@ export default function Dashboard() {
   const [config, setConfig] = useState<AiConfig | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [unreadSessions, setUnreadSessions] = useState<Set<string>>(new Set());
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // State for Messages
   const [messages, setMessages] = useState<Message[]>([]);
@@ -422,10 +408,13 @@ export default function Dashboard() {
         ? "Terima kasih Kak, pembayaran sudah kami terima. Pesanan segera diproses! 🎉"
         : "Maaf Kak, setelah kami cek, dananya belum masuk. Boleh minta tolong kirim foto bukti transfernya? 🙏";
 
+      const formData = new FormData();
+      formData.append("phone_number", selectedPhone);
+      formData.append("content", content);
+
       const res = await fetch("/api/manual-reply", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_number: selectedPhone, content }),
+        body: formData,
       });
       if (!res.ok) throw new Error("Gagal kirim pesan konfirmasi.");
     } catch (err: any) {
@@ -548,11 +537,11 @@ export default function Dashboard() {
                           </div>
                         </div>
                         {/* Status Badge */}
-                        {session.status && session.status !== 'new' && (
+                        {session.status && parseStatus(session.status).base !== 'new' && (
                           <div className={`mt-2 self-start inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            session.status === 'pending' ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                            parseStatus(session.status).base === 'pending' ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                           }`}>
-                            {session.status}
+                            {parseStatus(session.status).base}
                           </div>
                         )}
                       </>
@@ -598,15 +587,11 @@ export default function Dashboard() {
           </button>
           
           <button
-            onClick={() => setSelectedPhone("SETTINGS")}
-            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 py-2.5 px-4'} rounded-xl font-medium transition-all duration-200 ${
-              selectedPhone === "SETTINGS"
-                ? "bg-primary/20 text-primary shadow-sm"
-                : "bg-transparent border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
+            onClick={() => setIsSettingsOpen(true)}
+            className={`w-full flex items-center ${isSettingsOpen ? 'bg-primary/20 text-primary shadow-sm' : 'bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground'} ${isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 py-2.5 px-4'} rounded-xl font-medium transition-all duration-200`}
             title="Pengaturan AI"
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedPhone === "SETTINGS" ? "bg-primary/20" : "bg-muted text-muted-foreground"}`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSettingsOpen ? 'bg-primary/20' : 'bg-muted text-muted-foreground'}`}>
               <Settings size={16} />
             </div>
             {!isSidebarCollapsed && "Pengaturan AI"}
@@ -643,18 +628,18 @@ export default function Dashboard() {
           </div>
         )}
 
-        {selectedPhone === "SETTINGS" || selectedPhone === "PRODUCTS" || selectedPhone === "DASHBOARD" || selectedPhone === "BACKUPS" ? (
+        {selectedPhone === "PRODUCTS" || selectedPhone === "DASHBOARD" || selectedPhone === "BACKUPS" ? (
           <>
             <header className="md:hidden h-14 px-4 bg-card/80 backdrop-blur-md border-b border-border flex flex-shrink-0 items-center gap-3 sticky top-0 z-50">
               <button onClick={() => setSelectedPhone(null)} className="p-1.5 -ml-1 hover:bg-muted rounded-lg text-muted-foreground transition-colors">
                 <ArrowLeft size={20} />
               </button>
               <h2 className="font-semibold text-foreground text-sm">
-                {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : selectedPhone === "BACKUPS" ? "Backup Data" : "Dashboard Utama"}
+                {selectedPhone === "PRODUCTS" ? "Katalog Produk" : selectedPhone === "BACKUPS" ? "Backup Data" : "Dashboard Utama"}
               </h2>
             </header>
             <div className="flex-1 overflow-y-auto">
-              {selectedPhone === "SETTINGS" ? <SettingsView /> : selectedPhone === "PRODUCTS" ? <ProductsView /> : selectedPhone === "BACKUPS" ? <BackupsView /> : <DashboardOverview />}
+              {selectedPhone === "PRODUCTS" ? <ProductsView /> : selectedPhone === "BACKUPS" ? <BackupsView /> : <DashboardOverview />}
             </div>
           </>
         ) : !selectedPhone ? (
@@ -676,7 +661,7 @@ export default function Dashboard() {
                   <h2 className="font-semibold text-foreground truncate max-w-[150px] md:max-w-none">
                     {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : (
                       <span className="flex items-center gap-1.5">
-                        {getLangFlag(parseStatus(activeSession?.status).lang)} {config?.business_name || `+${selectedPhone}`} {getMoodEmoji(parseStatus(activeSession?.status).mood)}
+                        {config?.business_name || `+${selectedPhone}`}
                       </span>
                     )}
                   </h2>
@@ -963,6 +948,8 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+      
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

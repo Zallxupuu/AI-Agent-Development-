@@ -90,7 +90,7 @@ export async function getGeminiResponse(
       const c = configData as AiConfig;
       
       let linkText = "";
-      if (c.store_url) linkText = `\nLink Web/Toko: ${c.store_url} (Berikan link ini jika pelanggan bertanya tempat melihat katalog atau memesan secara online.)`;
+      if (c.store_url) linkText = `\n(Catatan: Jika pelanggan bertanya tempat melihat katalog web atau memesan secara online, JANGAN berikan link URL-nya secara langsung. Cukup tuliskan "[LINK]" di akhir pesanmu.)`;
       
       let paymentText = "";
       if (c.payment_format || c.qris_url) {
@@ -98,7 +98,7 @@ export async function getGeminiResponse(
       }
 
       let profileText = "";
-      if (c.profile_url) profileText = `\nURL Logo/Foto Profil Toko: ${c.profile_url} (Berikan link gambar ini jika pelanggan menanyakan logo atau profil toko kita.)`;
+      if (c.profile_url) profileText = `\n(Catatan: Jika pelanggan menanyakan logo atau profil foto/gambar toko, JANGAN berikan link URL-nya secara langsung. Cukup tuliskan "[GAMBAR_TOKO]" di akhir pesanmu.)`;
 
       // Format Products
       let productsText = c.products || ""; // Fallback to old text field
@@ -125,9 +125,17 @@ export async function getGeminiResponse(
       }
 
       let promoInstruction = "";
+      let manualTrainingData = "";
       try {
         const promoConfig = JSON.parse(c.products || "{}");
-        if (promoConfig.isActive && promoConfig.promoText) {
+        
+        // Extract training data
+        if (promoConfig.trainingData) {
+          manualTrainingData = `\n\nDATA LATIH (KNOWLEDGE BASE / PRICELIST):\nPelajari dan gunakan informasi berikut untuk menjawab pertanyaan pelanggan:\n"""\n${promoConfig.trainingData}\n"""\n`;
+        }
+
+        // Extract promo
+        if (promoConfig.active && promoConfig.text) {
           // Check expiration if date is set (end of that day)
           let isExpired = false;
           if (promoConfig.endDate) {
@@ -137,7 +145,7 @@ export async function getGeminiResponse(
           }
           
           if (!isExpired) {
-            promoInstruction = `\n\nPROMO SPESIAL (BERLAKU SAAT INI):\nAdmin mengaktifkan pesan promo berikut ini. WAJIB tawarkan/sampaikan promo ini persis seperti template di bawah jika pelanggan menanyakan harga produk, melihat katalog, atau hendak melakukan pemesanan (Order). JANGAN ubah teks promo ini (termasuk bintang tebal dan harga coret):\n\n"""\n${promoConfig.promoText}\n"""\n\n(Catatan: Jika promo menyebut produk tertentu, berikan promo ini jika pelanggan tertarik pada produk tsb atau masih bingung memilih).`;
+            promoInstruction = `\n\nPROMO SPESIAL (BERLAKU SAAT INI):\nAdmin mengaktifkan pesan promo berikut ini. WAJIB tawarkan/sampaikan promo ini persis seperti template di bawah jika pelanggan menanyakan harga produk, melihat katalog, atau hendak melakukan pemesanan (Order). JANGAN ubah teks promo ini (termasuk bintang tebal dan harga coret):\n\n"""\n${promoConfig.text}\n"""\n\n(Catatan: Jika promo menyebut produk tertentu, berikan promo ini jika pelanggan tertarik pada produk tsb atau masih bingung memilih).`;
           }
         }
       } catch (e) {
@@ -147,13 +155,26 @@ export async function getGeminiResponse(
       finalInstruction = `
 Nama Bisnis: ${c.business_name}
 Deskripsi Bisnis: ${c.business_description}
-Daftar Produk/Katalog:\n${productsText}\n${linkText}${paymentText}${profileText}${promoInstruction}
+Daftar Produk/Katalog Database:\n${productsText}\n${manualTrainingData}${linkText}${paymentText}${profileText}${promoInstruction}
 Aturan Gaya Bahasa & Penjawab: ${c.rules}
 
 PENTING UNTUK MENAMPILKAN PRODUK:
 Jika pelanggan bertanya tentang produk, berikan daftar yang rapi menggunakan bullet points (-) yang HANYA berisi Nama, Harga, dan Kategorinya saja. JANGAN PERNAH mengirimkan "Link Foto" produk atau mendeskripsikannya terlalu panjang. Biarkan obrolan tetap ringkas, bersih, dan rapi.
 
-Kamu adalah AI Customer Service. Jawablah pesan pelanggan secara natural, dan JANGAN LUPA ATURAN MUTLAK di atas.
+KODE INTERAKTIF (SANGAT PENTING):
+1. **[MENU]**: HANYA gunakan kode \`[MENU]\` di AKHIR balasanmu JIKA pelanggan secara eksplisit bertanya tentang "Menu", "Opsi", atau jika pelanggan tampak sangat kebingungan dengan layanan kita. JANGAN gunakan kode ini di setiap sapaan agar tidak terkesan mengganggu (spammy).
+2. **[KATALOG]**: Jika pelanggan secara spesifik meminta melihat "Katalog", "Daftar Produk", atau "Barang apa saja", WAJIB tambahkan kode \`[KATALOG]\` di AKHIR balasanmu.
+3. **[LINK]**: Jika pelanggan secara spesifik meminta "Link Toko", "Website", atau alamat web kita, WAJIB tambahkan kode \`[LINK]\` di AKHIR balasanmu.
+4. **[FEEDBACK]**: Jika pelanggan ingin memberikan ulasan, saran, kritik, atau rating, WAJIB tambahkan kode \`[FEEDBACK]\` di AKHIR balasanmu.
+5. **[GAMBAR_TOKO]**: Jika pelanggan meminta foto/gambar toko atau logo, WAJIB tambahkan kode \`[GAMBAR_TOKO]\` di AKHIR balasanmu.
+ATURAN GAYA BAHASA & SIKAP (SUPER PENTING):
+1. **JANGAN TERDENGAR SEPERTI ROBOT ATAU AI.** Berperanlah 100% sebagai manusia (Customer Service sungguhan). Jangan pernah memperkenalkan diri sebagai AI, bot, atau asisten virtual.
+2. Gunakan bahasa sehari-hari yang luwes, santai tapi sopan (misal: menggunakan kata "Kak", "Boleh", "Yuk", "Sebentar ya", "Oh iya"). 
+3. Hindari kalimat formal baku ala Wikipedia atau Customer Service korporat kaku. (Hindari kalimat seperti: "Saya siap membantu Anda", "Apakah ada hal lain yang bisa saya bantu?").
+4. Gunakan emoji secukupnya agar terkesan ramah, tapi jangan berlebihan.
+5. Balas dengan kalimat pendek-pendek seperti orang chatting pada umumnya di WhatsApp. JANGAN buat paragraf yang sangat panjang.
+
+Jawablah pesan pelanggan secara senatural mungkin bak manusia, dan JANGAN LUPA ATURAN MUTLAK di atas.
       `.trim();
     }
 

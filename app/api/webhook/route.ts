@@ -9,8 +9,9 @@
 
 import { type NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { sendWhatsAppMessage, sendWhatsAppImage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, sendWhatsAppImage, sendWhatsAppInteractiveButtons, sendWhatsAppInteractiveList, sendWhatsAppInteractiveUrl } from "@/lib/whatsapp";
 import { getGeminiResponse } from "@/lib/gemini";
+import { checkMLNickname } from "@/lib/nickname";
 import type {
   WhatsAppWebhookPayload,
   WhatsAppMessage,
@@ -52,24 +53,38 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 }
 
-export async function POST(request: NextRequest): Promise<Response> {
+// Simpan ID pesan yang sudah diproses di memori untuk deduplikasi cepat
+const processedMessageIds = new Set<string>();
+// Bersihkan cache setiap jam agar memori tidak bocor
+setInterval(() => processedMessageIds.clear(), 60 * 60 * 1000);
+
+export async function POST(req: NextRequest) {
   try {
-    const body: WhatsAppWebhookPayload = await request.json();
+    const body: WhatsAppWebhookPayload = await req.json();
 
-    if (body.object !== "whatsapp_business_account") {
-      return new Response("Not a WhatsApp webhook", { status: 404 });
-    }
+    if (body.object === "whatsapp_business_account") {
+      for (const entry of body.entry) {
+        const changes = entry.changes;
+        for (const change of changes) {
+          const value = change.value;
+          if (value.messages && value.messages.length > 0) {
+            for (const waMessage of value.messages) {
+              // Deduplikasi: Cegah pesan diproses dua kali (menghindari double chat)
+              if (waMessage.id && processedMessageIds.has(waMessage.id)) {
+                console.log(`[Webhook] Pesan ${waMessage.id} sudah diproses, mengabaikan duplikat.`);
+                continue;
+              }
+              if (waMessage.id) {
+                processedMessageIds.add(waMessage.id);
+              }
 
-    for (const entry of body.entry) {
-      for (const change of entry.changes) {
-        const value = change.value;
-
-        if (!value.messages || value.messages.length === 0) {
-          continue;
-        }
-
-        for (const waMessage of value.messages) {
-          await processIncomingMessage(waMessage);
+              // Jalankan secara asynchronous (tanpa await) agar webhook membalas 200 OK 
+              // ke WhatsApp dalam hitungan milidetik. Mencegah delay & pengiriman ulang dari Meta.
+              processIncomingMessage(waMessage).catch((err) => 
+                console.error("[Webhook] Error background processing:", err)
+              );
+            }
+          }
         }
       }
     }
@@ -90,9 +105,36 @@ async function processIncomingMessage(
   } else if (waMessage.type === "image" && waMessage.image?.id) {
     const caption = waMessage.image.caption ? ` Caption: ${waMessage.image.caption}` : "";
     messageContent = `[Pelanggan mengirim gambar/foto bukti] [IMAGE:${waMessage.image.id}]${caption}`;
+  } else if (waMessage.type === "interactive" && waMessage.interactive) {
+    if (waMessage.interactive.type === "button_reply") {
+      messageContent = waMessage.interactive.button_reply?.title || "";
+    } else if (waMessage.interactive.type === "list_reply") {
+      messageContent = waMessage.interactive.list_reply?.title || "";
+    }
+    
+    if (!messageContent) {
+      console.log(`[Webhook] Tipe interactive tidak dikenali.`);
+      return;
+    }
   } else {
     console.log(`[Webhook] Pesan tipe ${waMessage.type} diabaikan.`);
     return;
+  }
+
+  // INTERCEPT: Auto-Cek Nickname MLBB
+  // Regex mencari format: angka 5-12 digit, wajib diikuti spasi (opsional) dan kurung buka, angka 4-5 digit, dan kurung tutup
+  // Contoh: 1114917746 (13486) atau 1114917746(13486)
+  const mlbbRegex = /\b(\d{5,12})\s*\(\s*(\d{4,5})\s*\)/;
+  const match = messageContent.match(mlbbRegex);
+  if (match) {
+    const userId = match[1];
+    const zoneId = match[2];
+    const nickname = await checkMLNickname(userId, zoneId);
+    if (nickname) {
+      messageContent += `\n\n[SYSTEM INFO: Sistem telah mengecek ID Game secara otomatis ke server. Nickname in-game untuk ID ${userId} (${zoneId}) adalah "${nickname}". Informasikan nama ini ke pengguna untuk mengonfirmasi pesanan mereka.]`;
+    } else {
+      messageContent += `\n\n[SYSTEM INFO: Sistem mencoba mengecek ID ${userId} (${zoneId}) tetapi tidak ditemukan (invalid). Beritahu pengguna bahwa ID salah.]`;
+    }
   }
 
   const phoneNumber = waMessage.from;
@@ -222,13 +264,135 @@ async function processIncomingMessage(
     textToSend = textToSend.replace(/\[QRIS\]/g, "").trim();
   }
 
+  const needsMenu = textToSend.includes("[MENU]");
+  if (needsMenu) {
+    textToSend = textToSend.replace(/\[MENU\]/g, "").trim();
+  }
+
+  const needsLink = textToSend.includes("[LINK]");
+  if (needsLink) {
+    textToSend = textToSend.replace(/\[LINK\]/g, "").trim();
+  }
+
+  const needsKatalog = textToSend.includes("[KATALOG]");
+  if (needsKatalog) {
+    textToSend = textToSend.replace(/\[KATALOG\]/g, "").trim();
+  }
+
+  const needsFeedback = textToSend.includes("[FEEDBACK]");
+  if (needsFeedback) {
+    textToSend = textToSend.replace(/\[FEEDBACK\]/g, "").trim();
+  }
+
+  const needsProfileImg = textToSend.includes("[GAMBAR_TOKO]");
+  if (needsProfileImg) {
+    textToSend = textToSend.replace(/\[GAMBAR_TOKO\]/g, "").trim();
+  }
+
   try {
-    await sendWhatsAppMessage(phoneNumber, textToSend);
+    let aiConfig = null;
+    if (needsMenu || needsLink || needsFeedback) {
+      const { data } = await supabase.from("ai_config").select("products").eq("id", 1).single();
+      aiConfig = data;
+    }
+
+    if (needsMenu) {
+      let btn1 = "Lihat Produk", btn2 = "Cara Beli", btn3 = "Hubungi Admin";
+      let btnActive = true;
+      if (aiConfig?.products) {
+        try {
+          const promo = JSON.parse(aiConfig.products);
+          if (promo.interactive) {
+             btnActive = promo.interactive.enabled ?? true;
+             btn1 = promo.interactive.btn1 || btn1;
+             btn2 = promo.interactive.btn2 || btn2;
+             btn3 = promo.interactive.btn3 || btn3;
+          }
+        } catch (e) {}
+      }
+      
+      if (btnActive) {
+        await sendWhatsAppInteractiveButtons(phoneNumber, textToSend || "Silakan pilih opsi berikut:", [
+          { id: "btn_katalog", title: btn1.substring(0, 20) },
+          { id: "btn_cara_beli", title: btn2.substring(0, 20) },
+          { id: "btn_admin", title: btn3.substring(0, 20) }
+        ]);
+      } else {
+        await sendWhatsAppMessage(phoneNumber, textToSend);
+      }
+    } else if (needsLink) {
+      let linkLabel = "Kunjungi Website", linkUrl = "https://example.com";
+      let linkActive = true;
+      if (aiConfig?.products) {
+        try {
+          const promo = JSON.parse(aiConfig.products);
+          if (promo.interactive) {
+             linkActive = promo.interactive.linkEnabled ?? true;
+             linkLabel = promo.interactive.linkLabel || linkLabel;
+             linkUrl = promo.interactive.linkUrl || linkUrl;
+          }
+        } catch (e) {}
+      }
+      
+      if (linkActive && linkUrl) {
+        await sendWhatsAppInteractiveUrl(phoneNumber, textToSend || "Berikut link yang Anda minta:", linkLabel.substring(0, 20), linkUrl);
+      } else {
+        await sendWhatsAppMessage(phoneNumber, textToSend);
+      }
+    } else if (needsFeedback) {
+      let fbLabel = "Beri Ulasan", fbUrl = "https://forms.gle/";
+      let fbActive = true;
+      if (aiConfig?.products) {
+        try {
+          const promo = JSON.parse(aiConfig.products);
+          if (promo.interactive) {
+             fbActive = promo.interactive.fbEnabled ?? true;
+             fbLabel = promo.interactive.fbLabel || fbLabel;
+             fbUrl = promo.interactive.fbUrl || fbUrl;
+          }
+        } catch (e) {}
+      }
+      
+      if (fbActive && fbUrl) {
+        await sendWhatsAppInteractiveUrl(phoneNumber, textToSend || "Berikut form untuk ulasan:", fbLabel.substring(0, 20), fbUrl);
+      } else {
+        await sendWhatsAppMessage(phoneNumber, textToSend);
+      }
+    } else if (needsKatalog) {
+      // Ambil 10 produk teratas dari database
+      const { data: products } = await supabase.from("products").select("id, name, price").limit(10);
+      
+      if (products && products.length > 0) {
+        const rows = products.map(p => ({
+          id: `prod_${p.id}`,
+          title: p.name.substring(0, 24), // API limit: 24 chars for title
+          description: `Rp ${Number(p.price).toLocaleString('id-ID')}`
+        }));
+        
+        await sendWhatsAppInteractiveList(
+          phoneNumber,
+          textToSend || "Berikut adalah daftar produk kami:",
+          "Pilih Produk",
+          [{ title: "Katalog Produk", rows: rows }]
+        );
+      } else {
+        await sendWhatsAppMessage(phoneNumber, textToSend + "\n\n(Katalog sedang kosong)");
+      }
+    } else {
+      await sendWhatsAppMessage(phoneNumber, textToSend);
+    }
 
     if (needsQris) {
       const { data: config } = await supabase.from("ai_config").select("qris_url").eq("id", 1).single();
       if (config?.qris_url) {
-        await sendWhatsAppImage(phoneNumber, config.qris_url, "Silakan scan QRIS di atas untuk pembayaran.");
+        await sendWhatsAppImage(phoneNumber, config.qris_url, "Silakan scan QRIS di atas untuk pembayaran.", true);
+      }
+    }
+
+    if (needsProfileImg) {
+      const { data: config } = await supabase.from("ai_config").select("profile_url").eq("id", 1).single();
+      if (config?.profile_url) {
+        await sendWhatsAppImage(phoneNumber, config.profile_url, "Berikut adalah foto/logo toko kami.", true);
       }
     }
   } catch (sendError) {

@@ -21,36 +21,36 @@
 
 :root {
   /* Default Colors (Light) */
-  --background: #ffffff;
+  --background: #fdfdfd;
   --foreground: #171717;
   --card: #ffffff;
   --card-foreground: #171717;
-  --border: #e5e7eb;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
+  --border: #e2e8f0;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
 
-  /* Default Theme: Indigo */
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-light: #e0e7ff;
-  --primary-foreground: #ffffff;
+  /* Default Theme: Saweria (Yellow) */
+  --primary: #FFB800;
+  --primary-hover: #E5A600;
+  --primary-light: #FFF4D6;
+  --primary-foreground: #0f0f0f;
 }
 
 .dark {
-  /* Default Colors (Dark - Linear style dark slate) */
-  --background: #101214;
-  --foreground: #ececf1;
-  --card: #181b1f;
-  --card-foreground: #ececf1;
-  --border: #2d3139;
-  --muted: #1f2227;
-  --muted-foreground: #8e95a3;
+  /* Default Colors (Dark) */
+  --background: #0f1115;
+  --foreground: #f8fafc;
+  --card: #181b21;
+  --card-foreground: #f8fafc;
+  --border: #272c36;
+  --muted: #1e232b;
+  --muted-foreground: #94a3b8;
 
-  /* Default Theme: Indigo (Dark mode tweaked) */
-  --primary: #6366f1;
-  --primary-hover: #818cf8;
-  --primary-light: #3730a3;
-  --primary-foreground: #ffffff;
+  /* Default Theme: Saweria (Yellow) */
+  --primary: #FFC01A;
+  --primary-hover: #FFD147;
+  --primary-light: #4A3800;
+  --primary-foreground: #0f0f0f;
 }
 
 /* Theme: Blue */

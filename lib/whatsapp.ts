@@ -94,3 +94,89 @@ export async function sendWhatsAppImage(
 
   return response;
 }
+
+export async function sendWhatsAppInteractiveButtons(
+  to: string,
+  text: string,
+  buttons: { id: string; title: string }[]
+): Promise<Response> {
+  const response = await fetch(WA_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: {
+          text: text,
+        },
+        action: {
+          buttons: buttons.map((btn) => ({
+            type: "reply",
+            reply: {
+              id: btn.id,
+              title: btn.title,
+            },
+          })),
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[WhatsApp API Error] Interactive Buttons Status: ${response.status}, Body: ${errorBody}`);
+    throw new Error(`WhatsApp API error: ${response.status}`);
+  }
+
+  return response;
+}
+
+export async function sendWhatsAppInteractiveList(
+  to: string,
+  text: string,
+  buttonText: string,
+  sections: { title: string; rows: { id: string; title: string; description?: string }[] }[]
+): Promise<Response> {
+  const response = await fetch(WA_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        header: {
+          type: "text",
+          text: "Katalog Produk",
+        },
+        body: {
+          text: text,
+        },
+        action: {
+          button: buttonText,
+          sections: sections,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[WhatsApp API Error] Interactive List Status: ${response.status}, Body: ${errorBody}`);
+    throw new Error(`WhatsApp API error: ${response.status}`);
+  }
+
+  return response;
+}

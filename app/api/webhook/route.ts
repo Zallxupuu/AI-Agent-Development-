@@ -9,7 +9,7 @@
 
 import { type NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { sendWhatsAppMessage, sendWhatsAppImage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, sendWhatsAppImage, sendWhatsAppInteractiveButtons, sendWhatsAppInteractiveList } from "@/lib/whatsapp";
 import { getGeminiResponse } from "@/lib/gemini";
 import type {
   WhatsAppWebhookPayload,
@@ -90,6 +90,17 @@ async function processIncomingMessage(
   } else if (waMessage.type === "image" && waMessage.image?.id) {
     const caption = waMessage.image.caption ? ` Caption: ${waMessage.image.caption}` : "";
     messageContent = `[Pelanggan mengirim gambar/foto bukti] [IMAGE:${waMessage.image.id}]${caption}`;
+  } else if (waMessage.type === "interactive" && waMessage.interactive) {
+    if (waMessage.interactive.type === "button_reply") {
+      messageContent = waMessage.interactive.button_reply?.title || "";
+    } else if (waMessage.interactive.type === "list_reply") {
+      messageContent = waMessage.interactive.list_reply?.title || "";
+    }
+    
+    if (!messageContent) {
+      console.log(`[Webhook] Tipe interactive tidak dikenali.`);
+      return;
+    }
   } else {
     console.log(`[Webhook] Pesan tipe ${waMessage.type} diabaikan.`);
     return;
@@ -222,13 +233,51 @@ async function processIncomingMessage(
     textToSend = textToSend.replace(/\[QRIS\]/g, "").trim();
   }
 
+  const needsMenu = textToSend.includes("[MENU]");
+  if (needsMenu) {
+    textToSend = textToSend.replace(/\[MENU\]/g, "").trim();
+  }
+
+  const needsKatalog = textToSend.includes("[KATALOG]");
+  if (needsKatalog) {
+    textToSend = textToSend.replace(/\[KATALOG\]/g, "").trim();
+  }
+
   try {
-    await sendWhatsAppMessage(phoneNumber, textToSend);
+    if (needsMenu) {
+      await sendWhatsAppInteractiveButtons(phoneNumber, textToSend || "Silakan pilih opsi berikut:", [
+        { id: "btn_katalog", title: "Lihat Produk" },
+        { id: "btn_cara_beli", title: "Cara Beli" },
+        { id: "btn_admin", title: "Hubungi Admin" }
+      ]);
+    } else if (needsKatalog) {
+      // Ambil 10 produk teratas dari database
+      const { data: products } = await supabase.from("products").select("id, name, price").limit(10);
+      
+      if (products && products.length > 0) {
+        const rows = products.map(p => ({
+          id: `prod_${p.id}`,
+          title: p.name.substring(0, 24), // API limit: 24 chars for title
+          description: `Rp ${Number(p.price).toLocaleString('id-ID')}`
+        }));
+        
+        await sendWhatsAppInteractiveList(
+          phoneNumber,
+          textToSend || "Berikut adalah daftar produk kami:",
+          "Pilih Produk",
+          [{ title: "Katalog Produk", rows: rows }]
+        );
+      } else {
+        await sendWhatsAppMessage(phoneNumber, textToSend + "\n\n(Katalog sedang kosong)");
+      }
+    } else {
+      await sendWhatsAppMessage(phoneNumber, textToSend);
+    }
 
     if (needsQris) {
       const { data: config } = await supabase.from("ai_config").select("qris_url").eq("id", 1).single();
       if (config?.qris_url) {
-        await sendWhatsAppImage(phoneNumber, config.qris_url, "Silakan scan QRIS di atas untuk pembayaran.");
+        await sendWhatsAppImage(phoneNumber, config.qris_url, "Silakan scan QRIS di atas untuk pembayaran.", true);
       }
     }
   } catch (sendError) {

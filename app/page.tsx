@@ -25,8 +25,10 @@ import {
   Tag,
   LayoutDashboard,
   Paperclip,
-  X
+  X,
+  Archive
 } from "@/components/Icons";
+import BackupsView from "@/components/BackupsView";
 
 const parseStatus = (statusStr: string | undefined) => {
   if (!statusStr) return { base: 'new', mood: 'neutral', lang: 'id', payment: 'unpaid' };
@@ -581,6 +583,21 @@ export default function Dashboard() {
             </div>
             {!isSidebarCollapsed && "Pengaturan AI"}
           </button>
+
+          <button
+            onClick={() => setSelectedPhone("BACKUPS")}
+            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 py-2.5 px-4'} rounded-xl font-medium transition-all duration-200 ${
+              selectedPhone === "BACKUPS"
+                ? "bg-primary/20 text-primary shadow-sm"
+                : "bg-transparent border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+            title="Backup Data"
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedPhone === "BACKUPS" ? "bg-primary/20" : "bg-muted text-muted-foreground"}`}>
+              <Archive size={16} />
+            </div>
+            {!isSidebarCollapsed && "Backup Data"}
+          </button>
           
           <div className={`mt-2 flex ${isSidebarCollapsed ? 'justify-center' : 'px-2'}`}>
             <ThemeToggle isCollapsed={isSidebarCollapsed} />
@@ -598,18 +615,18 @@ export default function Dashboard() {
           </div>
         )}
 
-        {selectedPhone === "SETTINGS" || selectedPhone === "PRODUCTS" || selectedPhone === "DASHBOARD" ? (
+        {selectedPhone === "SETTINGS" || selectedPhone === "PRODUCTS" || selectedPhone === "DASHBOARD" || selectedPhone === "BACKUPS" ? (
           <>
             <header className="md:hidden h-14 px-4 bg-card/80 backdrop-blur-md border-b border-border flex flex-shrink-0 items-center gap-3 sticky top-0 z-50">
               <button onClick={() => setSelectedPhone(null)} className="p-1.5 -ml-1 hover:bg-muted rounded-lg text-muted-foreground transition-colors">
                 <ArrowLeft size={20} />
               </button>
               <h2 className="font-semibold text-foreground text-sm">
-                {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : "Dashboard Utama"}
+                {selectedPhone === "SETTINGS" ? "Pengaturan AI" : selectedPhone === "PRODUCTS" ? "Katalog Produk" : selectedPhone === "BACKUPS" ? "Backup Data" : "Dashboard Utama"}
               </h2>
             </header>
             <div className="flex-1 overflow-y-auto">
-              {selectedPhone === "SETTINGS" ? <SettingsView /> : selectedPhone === "PRODUCTS" ? <ProductsView /> : <DashboardOverview />}
+              {selectedPhone === "SETTINGS" ? <SettingsView /> : selectedPhone === "PRODUCTS" ? <ProductsView /> : selectedPhone === "BACKUPS" ? <BackupsView /> : <DashboardOverview />}
             </div>
           </>
         ) : !selectedPhone ? (

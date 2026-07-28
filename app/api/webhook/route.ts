@@ -158,24 +158,38 @@ async function processIncomingMessage(
 
   let textToSend = aiResponse;
 
-  // Extract Mood and Lang
+  // Extract Mood, Lang, and Payment
   const moodMatch = textToSend.match(/\[MOOD:(.*?)\]/i);
   const langMatch = textToSend.match(/\[LANG:(.*?)\]/i);
+  const paymentMatch = textToSend.includes("[PAYMENT_CLAIMED]");
   
   const mood = moodMatch ? moodMatch[1].toLowerCase() : null;
   const lang = langMatch ? langMatch[1].toLowerCase() : null;
   
   if (moodMatch) textToSend = textToSend.replace(moodMatch[0], "").trim();
   if (langMatch) textToSend = textToSend.replace(langMatch[0], "").trim();
+  if (paymentMatch) textToSend = textToSend.replace(/\[PAYMENT_CLAIMED\]/gi, "").trim();
 
-  if (mood || lang) {
+  if (mood || lang || paymentMatch) {
     const parts = currentStatus.split('|');
-    const baseStatus = parts[0] || 'new';
+    let baseStatus = parts[0] || 'new';
     const currentMood = parts[1] || 'neutral';
     const currentLang = parts[2] || 'id';
+    let currentPayment = parts[3] || 'unpaid';
+
+    if (paymentMatch) {
+      currentPayment = 'claimed';
+      baseStatus = 'pending'; // Force pending to get admin attention
+    }
     
-    currentStatus = `${baseStatus}|${mood || currentMood}|${lang || currentLang}`;
-    await supabase.from("sessions").update({ status: currentStatus }).eq("phone_number", phoneNumber);
+    currentStatus = `${baseStatus}|${mood || currentMood}|${lang || currentLang}|${currentPayment}`;
+    
+    const updateData: any = { status: currentStatus };
+    if (paymentMatch) {
+      updateData.is_bot_active = false; // Turn off bot so it doesn't auto-reply while waiting for confirmation
+    }
+    
+    await supabase.from("sessions").update(updateData).eq("phone_number", phoneNumber);
   }
   
   // Handle switch to manual reply
@@ -184,7 +198,7 @@ async function processIncomingMessage(
     textToSend = textToSend.replace(/\[MANUAL_REPLY\]/g, "").trim();
     
     const parts = currentStatus.split('|');
-    const newStatus = `pending|${parts[1] || 'neutral'}|${parts[2] || 'id'}`;
+    const newStatus = `pending|${parts[1] || 'neutral'}|${parts[2] || 'id'}|${parts[3] || 'unpaid'}`;
     
     // Nonaktifkan bot dan set status pending agar disorot admin
     await supabase

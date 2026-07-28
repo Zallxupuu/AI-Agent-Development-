@@ -90,7 +90,7 @@ export async function getGeminiResponse(
       const c = configData as AiConfig;
       
       let linkText = "";
-      if (c.store_url) linkText = `\nLink Web/Toko: ${c.store_url} (Berikan link ini jika pelanggan bertanya tempat melihat katalog atau memesan secara online.)`;
+      if (c.store_url) linkText = `\n(Catatan: Jika pelanggan bertanya tempat melihat katalog web atau memesan secara online, JANGAN berikan link URL-nya secara langsung. Cukup tuliskan "[LINK]" di akhir pesanmu.)`;
       
       let paymentText = "";
       if (c.payment_format || c.qris_url) {
@@ -98,7 +98,7 @@ export async function getGeminiResponse(
       }
 
       let profileText = "";
-      if (c.profile_url) profileText = `\nURL Logo/Foto Profil Toko: ${c.profile_url} (Berikan link gambar ini jika pelanggan menanyakan logo atau profil toko kita.)`;
+      if (c.profile_url) profileText = `\n(Catatan: Jika pelanggan menanyakan logo atau profil foto/gambar toko, JANGAN berikan link URL-nya secara langsung. Cukup tuliskan "[GAMBAR_TOKO]" di akhir pesanmu.)`;
 
       // Format Products
       let productsText = c.products || ""; // Fallback to old text field
@@ -157,6 +157,8 @@ KODE INTERAKTIF (SANGAT PENTING):
 1. **[MENU]**: HANYA gunakan kode \`[MENU]\` di AKHIR balasanmu JIKA pelanggan secara eksplisit bertanya tentang "Menu", "Opsi", atau jika pelanggan tampak sangat kebingungan dengan layanan kita. JANGAN gunakan kode ini di setiap sapaan agar tidak terkesan mengganggu (spammy).
 2. **[KATALOG]**: Jika pelanggan secara spesifik meminta melihat "Katalog", "Daftar Produk", atau "Barang apa saja", WAJIB tambahkan kode \`[KATALOG]\` di AKHIR balasanmu.
 3. **[LINK]**: Jika pelanggan secara spesifik meminta "Link Toko", "Website", atau alamat web kita, WAJIB tambahkan kode \`[LINK]\` di AKHIR balasanmu.
+4. **[FEEDBACK]**: Jika pelanggan ingin memberikan ulasan, saran, kritik, atau rating, WAJIB tambahkan kode \`[FEEDBACK]\` di AKHIR balasanmu.
+5. **[GAMBAR_TOKO]**: Jika pelanggan meminta foto/gambar toko atau logo, WAJIB tambahkan kode \`[GAMBAR_TOKO]\` di AKHIR balasanmu.
 ATURAN GAYA BAHASA & SIKAP (SUPER PENTING):
 1. **JANGAN TERDENGAR SEPERTI ROBOT ATAU AI.** Berperanlah 100% sebagai manusia (Customer Service sungguhan). Jangan pernah memperkenalkan diri sebagai AI, bot, atau asisten virtual.
 2. Gunakan bahasa sehari-hari yang luwes, santai tapi sopan (misal: menggunakan kata "Kak", "Boleh", "Yuk", "Sebentar ya", "Oh iya"). 

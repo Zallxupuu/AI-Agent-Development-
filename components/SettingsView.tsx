@@ -26,6 +26,11 @@ export default function SettingsView() {
   const [linkBtnActive, setLinkBtnActive] = useState(true);
   const [linkBtnLabel, setLinkBtnLabel] = useState("Kunjungi Website");
   const [linkBtnUrl, setLinkBtnUrl] = useState("");
+  
+  // Feedback Button State
+  const [fbBtnActive, setFbBtnActive] = useState(true);
+  const [fbBtnLabel, setFbBtnLabel] = useState("Beri Ulasan");
+  const [fbBtnUrl, setFbBtnUrl] = useState("");
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -70,6 +75,10 @@ export default function SettingsView() {
               setLinkBtnActive(promo.interactive.linkEnabled ?? true);
               setLinkBtnLabel(promo.interactive.linkLabel || "Kunjungi Website");
               setLinkBtnUrl(promo.interactive.linkUrl || "");
+              
+              setFbBtnActive(promo.interactive.fbEnabled ?? true);
+              setFbBtnLabel(promo.interactive.fbLabel || "Beri Ulasan");
+              setFbBtnUrl(promo.interactive.fbUrl || "");
             }
           } catch (e) {
             // If old text, just ignore
@@ -105,7 +114,10 @@ export default function SettingsView() {
           btn3,
           linkEnabled: linkBtnActive,
           linkLabel: linkBtnLabel,
-          linkUrl: linkBtnUrl
+          linkUrl: linkBtnUrl,
+          fbEnabled: fbBtnActive,
+          fbLabel: fbBtnLabel,
+          fbUrl: fbBtnUrl
         }
       };
       const { error } = await supabaseClient
@@ -418,6 +430,30 @@ export default function SettingsView() {
                     </div>
                   </motion.div>
                 )}
+
+                <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-xl mt-4">
+                  <div>
+                    <label className="block text-[14px] font-semibold text-foreground mb-1">Tombol Ulasan / Feedback</label>
+                    <p className="text-[12px] text-muted-foreground">Aktifkan untuk memberikan Link Google Forms/Review jika pelanggan memberi feedback.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={fbBtnActive} onChange={(e) => setFbBtnActive(e.target.checked)} />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {fbBtnActive && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[12px] font-semibold text-foreground mb-1">Label Tombol Feedback</label>
+                      <input type="text" value={fbBtnLabel} onChange={(e) => setFbBtnLabel(e.target.value)} maxLength={20} placeholder="Beri Ulasan" className="w-full px-4 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[14px]" />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-foreground mb-1">URL Formulir Feedback</label>
+                      <input type="url" value={fbBtnUrl} onChange={(e) => setFbBtnUrl(e.target.value)} placeholder="https://forms.gle/..." className="w-full px-4 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-[14px]" />
+                    </div>
+                  </motion.div>
+                )}
               </div>
             </div>
 
@@ -438,6 +474,46 @@ export default function SettingsView() {
                     placeholder="Contoh: https://tokopedia.com/toko-senja"
                     className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px] shadow-sm hover:border-primary/50"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-semibold text-foreground mb-1.5 uppercase tracking-wide">Gambar Profil Toko</label>
+                  <p className="text-[13px] text-muted-foreground mb-2 leading-relaxed">Pilih file dari komputer untuk menampilkan foto profil/logo toko kepada klien.</p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="url"
+                      value={config?.profile_url || ""}
+                      onChange={(e) => setConfig(prev => prev ? { ...prev, profile_url: e.target.value } : null)}
+                      placeholder="URL Gambar Profil (Otomatis terisi jika upload)"
+                      className="flex-1 px-4 py-2.5 bg-muted/50 border border-border rounded-xl focus:bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-[15px] shadow-sm hover:border-primary/50"
+                    />
+                    
+                    <div className="relative group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfileUpload}
+                        disabled={uploading}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+                      />
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-card text-foreground border border-border group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary rounded-xl transition-all font-medium disabled:opacity-70 shadow-sm"
+                      >
+                        {uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
+                        {uploading ? "Mengunggah..." : "Upload File"}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {config?.profile_url && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Preview Gambar:</p>
+                      <img src={config.profile_url} alt="Profile Preview" className="max-h-32 rounded-lg border border-border shadow-sm" />
+                    </div>
+                  )}
                 </div>
 
                 <div>

@@ -248,9 +248,19 @@ async function processIncomingMessage(
     textToSend = textToSend.replace(/\[KATALOG\]/g, "").trim();
   }
 
+  const needsFeedback = textToSend.includes("[FEEDBACK]");
+  if (needsFeedback) {
+    textToSend = textToSend.replace(/\[FEEDBACK\]/g, "").trim();
+  }
+
+  const needsProfileImg = textToSend.includes("[GAMBAR_TOKO]");
+  if (needsProfileImg) {
+    textToSend = textToSend.replace(/\[GAMBAR_TOKO\]/g, "").trim();
+  }
+
   try {
     let aiConfig = null;
-    if (needsMenu || needsLink) {
+    if (needsMenu || needsLink || needsFeedback) {
       const { data } = await supabase.from("ai_config").select("products").eq("id", 1).single();
       aiConfig = data;
     }
@@ -298,6 +308,25 @@ async function processIncomingMessage(
       } else {
         await sendWhatsAppMessage(phoneNumber, textToSend);
       }
+    } else if (needsFeedback) {
+      let fbLabel = "Beri Ulasan", fbUrl = "https://forms.gle/";
+      let fbActive = true;
+      if (aiConfig?.products) {
+        try {
+          const promo = JSON.parse(aiConfig.products);
+          if (promo.interactive) {
+             fbActive = promo.interactive.fbEnabled ?? true;
+             fbLabel = promo.interactive.fbLabel || fbLabel;
+             fbUrl = promo.interactive.fbUrl || fbUrl;
+          }
+        } catch (e) {}
+      }
+      
+      if (fbActive && fbUrl) {
+        await sendWhatsAppInteractiveUrl(phoneNumber, textToSend || "Berikut form untuk ulasan:", fbLabel.substring(0, 20), fbUrl);
+      } else {
+        await sendWhatsAppMessage(phoneNumber, textToSend);
+      }
     } else if (needsKatalog) {
       // Ambil 10 produk teratas dari database
       const { data: products } = await supabase.from("products").select("id, name, price").limit(10);
@@ -326,6 +355,13 @@ async function processIncomingMessage(
       const { data: config } = await supabase.from("ai_config").select("qris_url").eq("id", 1).single();
       if (config?.qris_url) {
         await sendWhatsAppImage(phoneNumber, config.qris_url, "Silakan scan QRIS di atas untuk pembayaran.", true);
+      }
+    }
+
+    if (needsProfileImg) {
+      const { data: config } = await supabase.from("ai_config").select("profile_url").eq("id", 1).single();
+      if (config?.profile_url) {
+        await sendWhatsAppImage(phoneNumber, config.profile_url, "Berikut adalah foto/logo toko kami.", true);
       }
     }
   } catch (sendError) {

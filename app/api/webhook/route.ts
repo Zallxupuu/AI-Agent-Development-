@@ -228,7 +228,7 @@ async function processIncomingMessage(
     if (needsQris) {
       const { data: config } = await supabase.from("ai_config").select("qris_url").eq("id", 1).single();
       if (config?.qris_url) {
-        await sendWhatsAppImage(phoneNumber, config.qris_url, "Silakan scan QRIS di atas untuk pembayaran.");
+        await sendWhatsAppImage(phoneNumber, config.qris_url, "Silakan scan QRIS di atas untuk pembayaran.", true);
       }
     }
   } catch (sendError) {
